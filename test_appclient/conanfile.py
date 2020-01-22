@@ -35,6 +35,7 @@ class test_appserver_conan_project(ConanFile):
     options = {
         "shared": [True, False],
         "debug": [True, False],
+        "enable_protoc_autoinstall": [True, False],
         "enable_tests": [True, False],
         "enable_sanitizers": [True, False],
         "enable_web_pthreads": [True, False]
@@ -43,6 +44,7 @@ class test_appserver_conan_project(ConanFile):
     default_options = (
         "shared=False",
         "debug=False",
+        "enable_protoc_autoinstall=False",
         "enable_tests=False",
         "enable_sanitizers=False",
         "enable_web_pthreads=True"
@@ -79,15 +81,18 @@ class test_appserver_conan_project(ConanFile):
     def build_requirements(self):
         #self.build_requires("cmake_platform_detection/master@conan/stable")
         #self.build_requires("cmake_build_options/master@conan/stable")
+        if self.options.enable_protoc_autoinstall:
+            self.build_requires("protoc_installer/3.6.1@bincrafters/stable")
 
         if self.options.enable_tests:
             self.build_requires("catch2/[>=2.1.0]@bincrafters/stable")
             self.build_requires("gtest/[>=1.8.0]@bincrafters/stable")
             self.build_requires("FakeIt/[>=2.0.4]@gasuketsu/stable")
 
-    #def requirements(self):
-        # NOTE: same as self.requires("glm/0.9.9.1@g-truc/stable")
-        #self.requires("cobalt_glm/0.9.9.1@conan/stable")
+    def requirements(self):
+        if self.options.enable_protoc_autoinstall:
+            # TODO: https://github.com/inexorgame/conan-grpc
+            self.requires("protobuf/3.6.1@bincrafters/stable")
 
         #self.requires("chromium_build_util/master@conan/stable")
 

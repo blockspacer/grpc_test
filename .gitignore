@@ -59,6 +59,10 @@ temp
 # QtCtreator CMake
 CMakeLists.txt.user*
 
+# Unintended secrets exposure
+.aws
+.env
+
 *node_modules*
 
 CMakeFiles/
@@ -114,3 +118,10 @@ src/chromium/third_party/boringssl_TODO/
 *.crt
 *.ca-cert*
 *.log
+*pb2.py
+*pb2_grpc.py
+
+*.grpc
+*.json
+
+\grpc

@@ -58,6 +58,8 @@ class GreeterServiceImpl final : public Greeter::Service {
 };
 
 void RunServer() {
+  std::cout << "Starting server... " << std::endl;
+
   std::string server_address("0.0.0.0:50051");
   GreeterServiceImpl service;
 
@@ -69,6 +71,11 @@ void RunServer() {
   builder.RegisterService(&service);
   // Finally assemble the server.
   std::unique_ptr<Server> server(builder.BuildAndStart());
+  if (!server) {
+    std::cerr << "Server failed to listen on " << server_address << std::endl;
+    return;
+  }
+
   std::cout << "Server listening on " << server_address << std::endl;
 
   // Wait for the server to shutdown. Note that some other thread must be

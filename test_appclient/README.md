@@ -26,6 +26,9 @@ Add conan remotes like so https://github.com/blockspacer/skia-opengl-emscripten/
 export CC=gcc
 export CXX=g++
 
+export GRPC_VERBOSITY=DEBUG
+export GRPC_TRACE=all,-timer_check,-timer
+
 # create build dir
 cmake -E remove_directory build
 cmake -E make_directory build
@@ -38,6 +41,12 @@ cmake -E chdir build cmake -E time cmake --build . -- -j6
 ```
 
 ```bash
-# run under gdb
+HTTP_PROXY= http_proxy= HTTPS_PROXY= https_proxy= no_proxy=localhost,127.0.0.1 ./build/test_appclient_core
+
+# to run under gdb, compile with -DCMAKE_BUILD_TYPE=Debug
 HTTP_PROXY= http_proxy= HTTPS_PROXY= https_proxy= no_proxy=localhost,127.0.0.1 gdb ./build/test_appclient_core -ex "run" -ex "set pagination off" -ex "bt" -ex "set confirm off" -ex "quit"
 ```
+
+## NOTE
+
+Build without debug for production

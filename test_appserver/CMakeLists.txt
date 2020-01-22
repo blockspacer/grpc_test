@@ -53,7 +53,7 @@ list(APPEND COMMON_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 )
 
-set(PROTOBUF_IMPORT_DIRS "${CMAKE_SOURCE_DIR}/")
+set(PROTOBUF_IMPORT_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../proto)
 
 # add_definitions(-DNDEBUG)
 
@@ -74,10 +74,7 @@ function(generate_proto FILENAMES)
     PROTOBUF_GENERATE_GRPC_CPP(GRPC_SRCS GRPC_HDRS ${FILENAMES})
 endfunction()
 
-set(Protobuf_IMPORT_DIRS ${CMAKE_CURRENT_SOURCE_DIR})
-
-#generate_proto(emoji.proto)
-set(RPCS emoji.proto)
+set(RPCS ${CMAKE_CURRENT_SOURCE_DIR}/../proto/emoji.proto)
 set(PROTOS ${RPCS})
 protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${PROTOS})
 protobuf_generate_grpc_cpp(GRPC_SRCS GRPC_HDRS ${RPCS})
@@ -114,6 +111,7 @@ set(USED_SYSTEM_LIBS
 target_link_libraries(
   ${PROJECT_NAME}
   PUBLIC
+    #CONAN_PKG::protobuf
     ${_PROTOBUF_LIBPROTOBUF}
     ${Protobuf_LIBRARIES}
     ${gRPC_LIBRARIES}

@@ -25,7 +25,8 @@ spec:
     spec:
       containers:
       - name: web-ui
-        image: vnoronha/grpc-web-istio-demo:web-ui
+        # NOTE: replace registry `ip:port` with server address
+        image: {{REGISTRY_IP}}/gaeus:web-ui
         imagePullPolicy: Always
         ports:
         - containerPort: 9001

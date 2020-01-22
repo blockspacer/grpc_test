@@ -6,8 +6,10 @@ metadata:
     app: server
 spec:
   ports:
+    # Note that once we deploy this service over Istio, the grpc- prefix in the Service port name will allow Istio to recognize this as a gRPC service.
   - name: grpc-web
-    port: 9000
+    # see containerPort below
+    port: 50051
   selector:
     app: server
 ---
@@ -25,7 +27,8 @@ spec:
     spec:
       containers:
       - name: server
-        image: vnoronha/grpc-web-istio-demo:server
+        # NOTE: replace registry `ip:port` with server address
+        image: {{REGISTRY_IP}}/gaeus:server
         imagePullPolicy: Always
         ports:
-        - containerPort: 9000
+        - containerPort: 50051
