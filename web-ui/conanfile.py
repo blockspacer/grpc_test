@@ -17,8 +17,8 @@ import shutil
 # package(),
 # package_info()
 
-class test_appserver_conan_project(ConanFile):
-    name = "test_appserver"
+class test_appserver_ui_conan_project(ConanFile):
+    name = "test_appserver_ui"
 
     # Indicates License type of the packaged library
     # TODO (!!!)
@@ -29,13 +29,12 @@ class test_appserver_conan_project(ConanFile):
     # TODO (!!!)
     #url = "https://github.com/blockspacer/CXXCTP"
 
-    description = "test_appserver meets conan"
+    description = "test_appserver_ui meets conan"
     topics = ('c++')
 
     options = {
         "shared": [True, False],
         "debug": [True, False],
-        "enable_protoc_autoinstall": [True, False],
         "enable_tests": [True, False],
         "enable_sanitizers": [True, False],
         "enable_web_pthreads": [True, False]
@@ -44,7 +43,6 @@ class test_appserver_conan_project(ConanFile):
     default_options = (
         "shared=False",
         "debug=False",
-        "enable_protoc_autoinstall=False",
         "enable_tests=False",
         "enable_sanitizers=False",
         "enable_web_pthreads=True"
@@ -91,15 +89,14 @@ class test_appserver_conan_project(ConanFile):
             self.build_requires("FakeIt/[>=2.0.4]@gasuketsu/stable")
 
     def requirements(self):
-
-        if self.options.enable_protoc_autoinstall:
-            # TODO: https://github.com/gaeus/conan-grpc
-            #self.requires("protobuf/3.6.1@bincrafters/stable")
-            self.requires("grpc_conan/v1.26.x@conan/stable")
-            self.requires("openssl/OpenSSL_1_1_1-stable@conan/stable")
-            self.requires("zlib/v1.2.11@conan/stable")
-            self.requires("c-ares/cares-1_15_0@conan/stable")
-            self.requires("protobuf/v3.9.1@conan/stable")
+        # TODO: https://github.com/gaeus/conan-grpc
+        #self.requires("protobuf/3.6.1@bincrafters/stable")
+        self.requires("grpc_conan/v1.26.x@conan/stable")
+        self.requires("openssl/OpenSSL_1_1_1-stable@conan/stable")
+        self.requires("zlib/v1.2.11@conan/stable")
+        self.requires("c-ares/cares-1_15_0@conan/stable")
+        self.requires("protobuf/v3.9.1@conan/stable")
+        self.requires("grpcweb_conan/1.0.7@conan/stable")
 
         #self.requires("chromium_build_util/master@conan/stable")
 

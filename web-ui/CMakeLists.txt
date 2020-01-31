@@ -36,7 +36,7 @@ if(EXISTS "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake")
   conan_basic_setup()
   list(APPEND CMAKE_PROGRAM_PATH ${CONAN_BIN_DIRS})
 else()
-  message (FATAL_ERROR "must use conan")
+  message (FATAL_ERROR "must use conan ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake")
 endif()
 # TODO: make better: link lib dirs
 link_directories(${CONAN_LIB_DIRS})
@@ -51,6 +51,10 @@ message(STATUS "CMAKE_LIBRARY_PATH: ${CMAKE_LIBRARY_PATH}")
 message(STATUS "CMAKE_PROGRAM_PATH: ${CMAKE_PROGRAM_PATH}")
 message(STATUS "CMAKE_EXE_LINKER_FLAGS: ${CMAKE_EXE_LINKER_FLAGS}")
 message(STATUS "CMAKE_SHARED_LINKER_FLAGS: ${CMAKE_SHARED_LINKER_FLAGS}")
+
+find_program(_PROTOC_GEN_GRPC_WEB_EXECUTABLE protoc-gen-grpc-web NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_SYSTEM_PATH)
+message(STATUS "protoc-gen-grpc-web: ${_PROTOC_GEN_GRPC_WEB_EXECUTABLE}")
+
 find_program(_gRPC_PROTOBUF_PROTOC_EXECUTABLE protoc NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_SYSTEM_PATH)
 message(STATUS "_gRPC_PROTOBUF_PROTOC_EXECUTABLE: ${_gRPC_PROTOBUF_PROTOC_EXECUTABLE}")
 find_program(PROTOBUF_PROTOC_EXECUTABLE protoc NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_SYSTEM_PATH)
@@ -366,14 +370,77 @@ function(generate_proto PROTO_FILENAMES GRPC_FILENAMES)
 endfunction()
 
 set(PROTO_OUTPATH ${CMAKE_CURRENT_BINARY_DIR})
-set(PROTOROOT ${CMAKE_CURRENT_SOURCE_DIR}/../proto)
-set(RPCS ${CMAKE_CURRENT_SOURCE_DIR}/../proto/emoji.proto)
+set(PROTOROOT_REL ${CMAKE_CURRENT_SOURCE_DIR}/../proto)
+get_filename_component(PROTOROOT ${PROTOROOT_REL} ABSOLUTE)
+set(RPCS ${PROTOROOT}/emoji.proto)
 set(PROTOS ${RPCS})
 #protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${PROTOS})
 #protobuf_generate_grpc_cpp(GRPC_SRCS GRPC_HDRS ${RPCS})
 #generate_proto(${PROTOS} ${RPCS})
-PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS PROTOFILES ${PROTOS} PROTOROOT ${PROTOROOT} OUTPATH ${PROTO_OUTPATH})
-GRPC_GENERATE_CPP(GRPC_SRCS GRPC_HDRS ${RPCS})
+#PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS PROTOFILES ${PROTOS} PROTOROOT ${PROTOROOT} OUTPATH ${PROTO_OUTPATH})
+#GRPC_GENERATE_CPP(GRPC_SRCS GRPC_HDRS ${RPCS})
+
+#&& \
+# see https://github.com/grpc/grpc-web
+#$PROTOC -I $PROTO_DIR/ $PROTO_FILE_PATH --js_out=import_style=$PROTO_IMPORT_STYLE:$PROTO_OUT_DIR \
+#       --grpc-web_out=import_style=$GRPC_WEB_IMPORT_STYLE,mode=$GRPC_WEB_MODE:$PROTO_OUT_DIR \
+
+# see https://github.com/grpc/grpc-web#import-style
+set(PROTO_IMPORT_STYLE "commonjs")
+# see https://github.com/grpc/grpc-web#wire-format-mode
+set(GRPC_WEB_MODE "grpcwebtext")
+# see https://github.com/grpc/grpc-web#import-style
+set(GRPC_WEB_IMPORT_STYLE "commonjs+dts")
+
+  #&& \
+  # see https://github.com/grpc/grpc-web
+  #$PROTOC -I $PROTO_DIR/ $PROTO_FILE_PATH --js_out=import_style=$PROTO_IMPORT_STYLE:$PROTO_OUT_DIR \
+  #       --grpc-web_out=import_style=$GRPC_WEB_IMPORT_STYLE,mode=$GRPC_WEB_MODE:$PROTO_OUT_DIR \
+  #&& \
+
+#set(ENV{PATH} foo)
+
+foreach(FIL ${PROTOS})
+  get_filename_component(ABS_FIL ${FIL} ABSOLUTE)
+  get_filename_component(FIL_WE ${FIL} NAME_WE)
+
+  #list(APPEND ${SRCS} "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}.grpc.pb.cc")
+  #list(APPEND ${HDRS} "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}.grpc.pb.h")
+  message(STATUS "Running js protocol buffer compiler with the GRPC plugin on ${ABS_FIL}")
+  execute_process(
+    COMMAND
+      ${COLORED_OUTPUT_ENABLER}
+        # TODO: ability to change "--profile"
+        #_PROTOC_GEN_GRPC_WEB_EXECUTABLE
+        ${Protobuf_PROTOC_EXECUTABLE}
+        "-I" "${PROTOROOT}" "${ABS_FIL}"
+        "--js_out=import_style=${PROTO_IMPORT_STYLE}:${PROTO_OUTPATH}"
+        "--grpc-web_out=import_style=${GRPC_WEB_IMPORT_STYLE},mode=${GRPC_WEB_MODE}:${PROTO_OUTPATH}"
+        "--plugin=protoc-gen-grpc-web=${_PROTOC_GEN_GRPC_WEB_EXECUTABLE}"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    TIMEOUT 7200 # sec
+    RESULT_VARIABLE retcode
+    ERROR_VARIABLE stderr
+    ${OUTPUT_VARS}
+  )
+  if(NOT "${retcode}" STREQUAL "0")
+    message( FATAL_ERROR "Bad exit status ${retcode} ${stdout} ${stderr}")
+  endif()
+  #add_custom_command(
+  #  OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}.pb.js"
+  #        "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}.grpc.pb.js"
+  #  COMMAND  ${Protobuf_PROTOC_EXECUTABLE}
+  #      -I ${PROTOROOT}
+  #      --js_out=import_style=${PROTO_IMPORT_STYLE}:${PROTO_OUTPATH}
+  #      --grpc-web_out=import_style=${GRPC_WEB_IMPORT_STYLE},mode=${GRPC_WEB_MODE}:${PROTO_OUTPATH}
+  #      #--plugin=protoc-gen-grpc=${GRPC_CPP_PLUGIN}
+  #      #--grpc_out=${CMAKE_CURRENT_BINARY_DIR}
+  #      #${_protobuf_include_path}
+  #      ${ABS_FIL}
+  #  DEPENDS ${ABS_FIL} ${Protobuf_PROTOC_EXECUTABLE} ${GRPC_CPP_PLUGIN}
+  #  COMMENT "Running js protocol buffer compiler with the GRPC plugin on ${FIL}"
+  #  VERBATIM )
+endforeach()
 
 #set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/src/ctp_registry.cpp PROPERTIES
 #                            GENERATED 1)

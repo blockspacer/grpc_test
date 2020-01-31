@@ -1,5 +1,5 @@
-const {HelloRequest, RepeatHelloRequest, HelloResponse} = require('./.generated/emoji_pb.js');
-const {GreeterClient} = require('./.generated/emoji_grpc_web_pb.js');
+const {HelloRequest, RepeatHelloRequest, HelloResponse} = require('./build/emoji_pb.js');
+const {GreeterClient} = require('./build/emoji_grpc_web_pb.js');
 
 var client = new GreeterClient('http://' + window.location.host);
 var editor = document.getElementById('editor');

@@ -1,5 +1,5 @@
 # allows individual sections to be run by doing: docker build --target ...
-FROM gaeus:grpc_build_env as test_appserver_target
+FROM gaeus:cxx_build_env as test_appserver_target
 # NOTE: if not BUILD_GRPC_FROM_SOURCES, then script uses conan protobuf package
 ARG BUILD_TYPE=Release
 # NOTE: cmake from apt may be outdated
@@ -15,7 +15,7 @@ ARG PIP="pip3"
 ARG CONAN="conan"
 # Example: conan install --build=missing --profile gcc
 ARG CONAN_INSTALL="conan install --profile gcc"
-ARG INSTALL_GRPC_FROM_CONAN="False"
+ARG INSTALL_GRPC_FROM_CONAN="True"
 # Example: --build-arg CONAN_EXTRA_REPOS="conan-local http://localhost:8081/artifactory/api/conan/conan False"
 ARG CONAN_EXTRA_REPOS=""
 # Example: --build-arg CONAN_EXTRA_REPOS_USER="user -p password -r conan-local admin"
@@ -65,14 +65,11 @@ RUN set -ex \
   $APT install -y \
                     git \
   && \
-  # must exist
-  $LS_VERBOSE /usr/local/lib/libprotobuf* \
+  ($LS_VERBOSE /usr/local/lib/libprotobuf* || true) \
   && \
-  # must exist
-  $LS_VERBOSE /usr/local/lib/libgrpc* \
+  ($LS_VERBOSE /usr/local/lib/libgrpc* || true) \
   && \
-  # must exist
-  $PROTOC --version \
+  ($PROTOC --version || true) \
   && \
   cd $PROJ_DIR \
   && \
@@ -165,6 +162,7 @@ RUN set -ex \
     $CMAKE -E chdir build $CONAN_INSTALL -s build_type=$BUILD_TYPE -o enable_protoc_autoinstall=True .. \
     ; \
   else \
+    # TODO: INSTALL without CONAN requires grpc_build_env
     # configure \
     $CMAKE -E chdir build $CONAN_INSTALL -s build_type=$BUILD_TYPE -o enable_protoc_autoinstall=False .. \
     ; \

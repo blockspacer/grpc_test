@@ -123,7 +123,7 @@ sudo -E docker build --build-arg NO_PROXY=$(minikube ip),localhost,127.0.0.*,10.
 # NOTE: you can place already cloned grpc into `GRPC_LOCAL_TO_PROJECT_PATH` and enable `BUILD_GRPC_FROM_SOURCES`
 sudo -E docker build --build-arg NO_PROXY=$(minikube ip),localhost,127.0.0.*,10.*,192.168.* --build-arg GRPC_LOCAL_TO_PROJECT_PATH=grpc --build-arg BUILD_GRPC_FROM_SOURCES=False --build-arg BUILD_GRPC_WEB_FROM_SOURCES=False -f docker/grpc_build_env.Dockerfile --tag gaeus:grpc_build_env . --no-cache
 
-sudo -E docker build --build-arg NO_PROXY=$(minikube ip),localhost,127.0.0.*,10.*,192.168.* -f docker/web-ui.Dockerfile --tag $(minikube ip):5000/gaeus:web-ui . --no-cache
+sudo -E docker build --build-arg BUILD_TYPE=Debug --build-arg NO_PROXY=$(minikube ip),localhost,127.0.0.*,10.*,192.168.* -f docker/web-ui.Dockerfile --tag $(minikube ip):5000/gaeus:web-ui . --no-cache
 
 # TODO: INSTALL_GRPC_FROM_CONAN
 # NOTE: --build-arg BUILD_TYPE=Debug
