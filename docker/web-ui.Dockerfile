@@ -42,7 +42,11 @@ ENV LC_ALL=C.UTF-8 \
     NODE_GYP_CA_FILE= \
     GOPATH=/go \
     START_APP="python3" \
-    START_APP_OPTIONS="-m http.server 9001"
+    START_APP_OPTIONS="-m http.server 9001" \
+    CONAN_REVISIONS_ENABLED=1 \
+    CONAN_PRINT_RUN_COMMANDS=1 \
+    CONAN_LOGGING_LEVEL=10 \
+    CONAN_VERBOSE_TRACEBACK=1
 
 # docker build --build-arg NO_SSL="False" APT="apt-get -qq --no-install-recommends" .
 ARG NO_SSL="True"
