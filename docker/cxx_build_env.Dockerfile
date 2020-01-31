@@ -6,13 +6,19 @@ ENV LC_ALL=C.UTF-8 \
     LANG=en_US.UTF-8 \
     LANGUAGE=en_US:en \
     #TERM=screen \
-    PATH=/usr/bin/:/usr/local/bin/:/usr/local/include/:/usr/local/lib/:/usr/lib/clang/6.0/include:/usr/lib/llvm-6.0/include/:$PATH \
+    PATH=/usr/bin/:/usr/local/bin/:/go/bin:/usr/local/go/bin:/usr/local/include/:/usr/local/lib/:/usr/lib/clang/6.0/include:/usr/lib/llvm-6.0/include/:$PATH \
     LD_LIBRARY_PATH=/usr/local/lib/:$LD_LIBRARY_PATH \
     GIT_AUTHOR_NAME=$GIT_USERNAME \
     GIT_AUTHOR_EMAIL=$GIT_EMAIL \
     GIT_COMMITTER_NAME=$GIT_USERNAME \
     GIT_COMMITTER_EMAIL=$GIT_EMAIL \
-    WDIR=/opt
+    WDIR=/opt \
+    GOLANG_VERSION=1.12.4 \
+    GOPATH=/go \
+    CONAN_REVISIONS_ENABLED=1 \
+    CONAN_PRINT_RUN_COMMANDS=1 \
+    CONAN_LOGGING_LEVEL=10 \
+    CONAN_VERBOSE_TRACEBACK=1
 
 ARG APT="apt-get -qq --no-install-recommends"
 # docker build --build-arg NO_SSL="False" APT="apt-get -qq --no-install-recommends" .
@@ -57,9 +63,21 @@ ARG NANO_FROM_APT="False"
 ARG MC_FROM_APT="False"
 ARG PY3_DEV_FROM_APT="False"
 ARG PY3_SETUPTOOLS_FROM_APT="True"
+# NOTE: conan requires python3, python3-pip, python3-setuptools
 ARG INSTALL_CONAN="True"
+ARG CONAN="conan"
+# Example: conan-local http://localhost:8081/artifactory/api/conan/conan False
+ARG CONAN_EXTRA_REPOS=""
+# Example: user -p password -r conan-local admin
+ARG CONAN_EXTRA_REPOS_USER=""
+ARG INSTALL_GO="True"
 # see git config --global http.sslCAInfo
+ARG GIT="git"
 ARG GIT_CA_INFO=""
+ARG GO="go"
+ARG PIP="pip3"
+# NOTE: you may want to remove `--trusted-host`
+ARG PIP_INSTALL="$PIP install --no-cache-dir --index-url=https://pypi.python.org/simple/ --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org"
 # https://askubuntu.com/a/1013396
 # https://github.com/phusion/baseimage-docker/issues/319
 # RUN export DEBIAN_FRONTEND=noninteractive
@@ -72,9 +90,9 @@ RUN set -ex \
   && \
   mkdir -p $WDIR \
   && \
-  cp $WDIR/.ca-certificates/* /usr/local/share/ca-certificates/ || true \
+  (cp $WDIR/.ca-certificates/* /usr/local/share/ca-certificates/ || true) \
   && \
-  rm -rf $WDIR/.ca-certificates || true \
+  (rm -rf $WDIR/.ca-certificates || true) \
   && \
   cd $WDIR \
   && \
@@ -83,6 +101,10 @@ RUN set -ex \
   ldconfig \
   && \
   if [ "$NO_SSL" = "True" ]; then \
+    echo 'WARNING: SSL CHECKS DISABLED! SEE NO_SSL FLAG IN DOCKERFILE' \
+    && \
+    export NODE_TLS_REJECT_UNAUTHORIZED=0 \
+    && \
     echo 'NODE_TLS_REJECT_UNAUTHORIZED=0' >> ~/.bashrc \
     && \
     echo "strict-ssl=false" >> ~/.npmrc \
@@ -131,7 +153,7 @@ RUN set -ex \
   && \
   export GNUPGHOME="$(mktemp -d)" \
   && \
-  mkdir ~/.gnupg || true \
+  (mkdir ~/.gnupg || true) \
   && \
   echo "keyserver-options auto-key-retrieve" >> ~/.gnupg/gpg.conf \
   && \
@@ -144,11 +166,13 @@ RUN set -ex \
   keys=94558F59\ 1E9377A2BA9EF27F\ 2EA8F35793D8809A \
   && \
   if [ ! -z "$http_proxy" ]; then \
+    echo 'WARNING: GPG SSL CHECKS DISABLED! SEE http_proxy IN DOCKERFILE' \
+    && \
     for key in $keys; do \
     for server in $keyservers; do \
     echo "Fetching GPG key ${key} from ${server}" \
     && \
-    gpg --keyserver "$server" --keyserver-options http-proxy=$http_proxy --recv-keys "${key}" || true \
+    (gpg --keyserver "$server" --keyserver-options http-proxy=$http_proxy --recv-keys "${key}" || true) \
     ; done \
     ; done \
     ; \
@@ -157,7 +181,7 @@ RUN set -ex \
     for server in $keyservers; do \
     echo "Fetching GPG key ${key} from ${server}" \
     && \
-    gpg --keyserver "$server" --keyserver-options timeout=10 --recv-keys "${key}" || true \
+    (gpg --keyserver "$server" --keyserver-options timeout=10 --recv-keys "${key}" || true) \
     ; done \
     ; done \
     ; \
@@ -165,7 +189,8 @@ RUN set -ex \
   && \
   gpg --list-keys \
   && \
-  apt-key adv --keyserver-options http-proxy=$http_proxy --fetch-keys http://llvm.org/apt/llvm-snapshot.gpg.key || true \
+  (apt-key adv --keyserver-options http-proxy=$http_proxy --fetch-keys http://llvm.org/apt/llvm-snapshot.gpg.key || true) \
+  && \
   echo "added llvm-snapshot.gpg.key" \
   #&& \
   #apt-add-repository -y "deb http://ppa.launchpad.net/ubuntu-toolchain-r/test/ubuntu $(lsb_release -sc) main" \
@@ -204,21 +229,25 @@ RUN set -ex \
                     curl \
   && \
   if [ "$NO_SSL" = "True" ]; then \
-    git config --global http.sslVerify false || true \
+    echo 'WARNING: GIT SSL CHECKS DISABLED! SEE NO_SSL FLAG IN DOCKERFILE' \
     && \
-    git config --global https.sslVerify false || true \
+    ($GIT config --global http.sslVerify false || true) \
     && \
-    git config --global http.postBuffer 1048576000 || true \
+    ($GIT config --global https.sslVerify false || true) \
+    && \
+    ($GIT config --global http.postBuffer 1048576000 || true) \
     && \
     # solves 'Connection time out' on server in company domain. \
-    git config --global url."https://github.com".insteadOf git://github.com || true \
+    ($GIT config --global url."https://github.com".insteadOf git://github.com || true) \
     && \
     export GIT_SSL_NO_VERIFY=true \
     ; \
   fi \
   && \
   if [ "$GIT_CA_INFO" != "" ]; then \
-    git config --global http.sslCAInfo $GIT_CA_INFO || true \
+    echo 'WARNING: GIT_CA_INFO CHANGED! SEE GIT_CA_INFO FLAG IN DOCKERFILE' \
+    && \
+    ($GIT config --global http.sslCAInfo $GIT_CA_INFO || true) \
     ; \
   fi \
   && \
@@ -463,6 +492,8 @@ RUN set -ex \
   echo "                  http://pypi.python.org/simple" >> $HOME/.pip/pip.conf \
   && \
   if [ "$NO_SSL" = "True" ]; then \
+    echo 'WARNING: PIP SSL CHECKS DISABLED! SEE NO_SSL FLAG IN DOCKERFILE' \
+    && \
     echo "trusted-host = download.zope.org" >> $HOME/.pip/pip.conf \
     && \
     echo "               pypi.python.org" >> $HOME/.pip/pip.conf \
@@ -510,31 +541,46 @@ RUN set -ex \
   ldconfig \
   && \
   if [ ! -z "$http_proxy" ]; then \
-      git config --global http.proxyAuthMethod 'basic' || true \
-      && \
-      git config --global http.sslverify false  || true \
-      && \
-      git config --global https.sslverify false || true \
-      && \
-      git config --global http.proxy $http_proxy || true \
-      && \
-      git config --global https.proxy $https_proxy || true \
-      ; \
+    echo 'WARNING: GIT sslverify DISABLED! SEE http_proxy IN DOCKERFILE' \
+    && \
+    ($GIT config --global http.proxyAuthMethod 'basic' || true) \
+    && \
+    ($GIT config --global http.sslverify false  || true) \
+    && \
+    ($GIT config --global https.sslverify false || true) \
+    && \
+    ($GIT config --global http.proxy $http_proxy || true) \
+    && \
+    ($GIT config --global https.proxy $https_proxy || true) \
+    ; \
   fi \
   && \
-  pip3 install --no-cache-dir --index-url=https://pypi.python.org/simple/ --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org wheel \
+  $PIP_INSTALL wheel \
   && \
-  pip3 install --no-cache-dir --index-url=https://pypi.python.org/simple/ --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org virtualenv \
+  $PIP_INSTALL virtualenv \
   && \
-  pip3 install --no-cache-dir --index-url=https://pypi.python.org/simple/ --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org conan \
+  $PIP_INSTALL conan \
   && \
-  pip3 install --no-cache-dir --index-url=https://pypi.python.org/simple/ --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org conan_package_tools \
+  $PIP_INSTALL conan_package_tools \
   # TODO: use conan profile new https://github.com/conan-io/conan/issues/1541#issuecomment-321235829 \
   && \
   if [ "$INSTALL_CONAN" = "True" ]; then \
-    conan profile new default --detect \
+    # must exist
+    $CONAN --version \
     && \
-    conan profile update settings.compiler.libcxx=libstdc++11 default \
+    $CONAN profile new default --detect \
+    && \
+    $CONAN profile update settings.compiler.libcxx=libstdc++11 default \
+    && \
+    if [ ! -z "$CONAN_EXTRA_REPOS" ]; then \
+      $CONAN remote add $CONAN_EXTRA_REPOS \
+      ; \
+    fi \
+    && \
+    if [ ! -z "$CONAN_EXTRA_REPOS_USER" ]; then \
+      $CONAN $CONAN_EXTRA_REPOS_USER \
+      ; \
+    fi \
     && \
     mkdir -p $HOME/.conan/profiles/ \
     && \
@@ -591,6 +637,25 @@ RUN set -ex \
     ; \
   fi \
   && \
+  if [ "$INSTALL_GO" = "True" ]; then \
+    echo "Installing go into GOPATH=$GOPATH" \
+    && \
+    # NOTE: Add $GOPATH/bin in PATH
+    mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 777 "$GOPATH" \
+    && \
+    cd /tmp \
+    && \
+    wget --no-check-certificate -O go.tgz "https://golang.org/dl/go${GOLANG_VERSION}.linux-amd64.tar.gz" \
+    && \
+    # NOTE: Add /usr/local/go/bin in PATH
+    tar -C /usr/local -xzf go.tgz \
+    && \
+    rm go.tgz \
+    && \
+    $GO version \
+    ; \
+  fi \
+  && \
   rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/* /build/* \
   && \
   $APT clean \
@@ -599,10 +664,10 @@ RUN set -ex \
   && \
   mkdir -p /etc/ssh/ && echo ClientAliveInterval 60 >> /etc/ssh/sshd_config \
   && \
-  git config --global --unset http.proxyAuthMethod || true \
+  ($GIT config --global --unset http.proxyAuthMethod || true) \
   && \
-  git config --global --unset http.proxy || true \
+  ($GIT config --global --unset http.proxy || true) \
   && \
-  git config --global --unset https.proxy || true \
+  ($GIT config --global --unset https.proxy || true) \
   && \
   rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/* /build/*

@@ -58,6 +58,7 @@ class test_appserver_conan_project(ConanFile):
 
     # NOTE: no cmake_find_package due to custom FindXXX.cmake
     generators = "cmake", "cmake_paths", "virtualenv"
+    #generators = "cmake", "cmake_paths", "virtualenv", "cmake_find_package_multi"
 
     # Packages the license for the conanfile.py
     #exports = ["LICENSE.md"]
@@ -81,8 +82,8 @@ class test_appserver_conan_project(ConanFile):
     def build_requirements(self):
         #self.build_requires("cmake_platform_detection/master@conan/stable")
         #self.build_requires("cmake_build_options/master@conan/stable")
-        if self.options.enable_protoc_autoinstall:
-            self.build_requires("protoc_installer/3.6.1@bincrafters/stable")
+        #if self.options.enable_protoc_autoinstall:
+        #    self.build_requires("protoc_installer/3.6.1@bincrafters/stable")
 
         if self.options.enable_tests:
             self.build_requires("catch2/[>=2.1.0]@bincrafters/stable")
@@ -90,9 +91,15 @@ class test_appserver_conan_project(ConanFile):
             self.build_requires("FakeIt/[>=2.0.4]@gasuketsu/stable")
 
     def requirements(self):
+
         if self.options.enable_protoc_autoinstall:
-            # TODO: https://github.com/inexorgame/conan-grpc
-            self.requires("protobuf/3.6.1@bincrafters/stable")
+            # TODO: https://github.com/gaeus/conan-grpc
+            #self.requires("protobuf/3.6.1@bincrafters/stable")
+            self.requires("grpc_conan/v1.26.x@conan/stable")
+            self.requires("openssl/OpenSSL_1_1_1-stable@conan/stable")
+            self.requires("zlib/v1.2.11@conan/stable")
+            self.requires("c-ares/cares-1_15_0@conan/stable")
+            self.requires("protobuf/v3.9.1@conan/stable")
 
         #self.requires("chromium_build_util/master@conan/stable")
 
@@ -107,6 +114,9 @@ class test_appserver_conan_project(ConanFile):
         cmake = CMake(self)
         cmake.parallel = True
         cmake.verbose = True
+
+        cmake.definitions["protobuf_VERBOSE"] = True
+        cmake.definitions["protobuf_MODULE_COMPATIBLE"] = True
 
         if self.options.shared:
             cmake.definitions["BUILD_SHARED_LIBS"] = "ON"
@@ -201,3 +211,6 @@ class test_appserver_conan_project(ConanFile):
 
         #self.cpp_info.libs = tools.collect_libs(self)
         #self.cpp_info.defines.append('PDFLIB_DLL')
+
+    #def deploy(self):
+    #    self.copy("*", dst="/usr/local/bin", src="bin", keep_path=False)

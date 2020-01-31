@@ -91,7 +91,7 @@ class test_appserver_conan_project(ConanFile):
 
     def requirements(self):
         if self.options.enable_protoc_autoinstall:
-            # TODO: https://github.com/inexorgame/conan-grpc
+            # TODO: https://github.com/gaeus/conan-grpc
             self.requires("protobuf/3.6.1@bincrafters/stable")
 
         #self.requires("chromium_build_util/master@conan/stable")

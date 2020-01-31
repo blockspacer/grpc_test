@@ -118,15 +118,17 @@ minikube tunnel --cleanup
 ## Build docker images
 
 ```bash
-sudo -E docker build --build-arg NO_PROXY=$(minikube ip),localhost,127.0.0.*,10.*,192.168.* -f docker/cxx_build_env.Dockerfile --tag gaeus:cxx_build_env .
+sudo -E docker build --build-arg NO_PROXY=$(minikube ip),localhost,127.0.0.*,10.*,192.168.* -f docker/cxx_build_env.Dockerfile --tag gaeus:cxx_build_env . --no-cache
 
 # NOTE: you can place already cloned grpc into `GRPC_LOCAL_TO_PROJECT_PATH` and enable `BUILD_GRPC_FROM_SOURCES`
-sudo -E docker build --build-arg NO_PROXY=$(minikube ip),localhost,127.0.0.*,10.*,192.168.* --build-arg GRPC_LOCAL_TO_PROJECT_PATH=grpc --build-arg BUILD_GRPC_FROM_SOURCES=False -f docker/grpc_build_env.Dockerfile --tag gaeus:grpc_build_env .
+sudo -E docker build --build-arg NO_PROXY=$(minikube ip),localhost,127.0.0.*,10.*,192.168.* --build-arg GRPC_LOCAL_TO_PROJECT_PATH=grpc --build-arg BUILD_GRPC_FROM_SOURCES=False --build-arg BUILD_GRPC_WEB_FROM_SOURCES=False -f docker/grpc_build_env.Dockerfile --tag gaeus:grpc_build_env . --no-cache
 
-sudo -E docker build --build-arg NO_PROXY=$(minikube ip),localhost,127.0.0.*,10.*,192.168.* -f docker/web-ui.Dockerfile --tag $(minikube ip):5000/gaeus:web-ui .
+sudo -E docker build --build-arg NO_PROXY=$(minikube ip),localhost,127.0.0.*,10.*,192.168.* -f docker/web-ui.Dockerfile --tag $(minikube ip):5000/gaeus:web-ui . --no-cache
 
 # TODO: INSTALL_GRPC_FROM_CONAN
-sudo -E docker build --build-arg NO_PROXY=$(minikube ip),localhost,127.0.0.*,10.*,192.168.* -f docker/server.Dockerfile --tag $(minikube ip):5000/gaeus:server .
+# NOTE: --build-arg BUILD_TYPE=Debug
+# NOTE: to add custom conan repo replace YOUR_REPO_URL_HERE in: --build-arg CONAN_EXTRA_REPOS="conan-local http://YOUR_REPO_URL_HERE:8081/artifactory/api/conan/conan False" --build-arg CONAN_EXTRA_REPOS_USER="user -p password -r conan-local admin"
+sudo -E docker build --build-arg BUILD_TYPE=Debug --build-arg NO_PROXY=$(minikube ip),localhost,127.0.0.*,10.*,192.168.* -f docker/server.Dockerfile --tag $(minikube ip):5000/gaeus:server . --no-cache
 ```
 
 ## Push docker images to local minikube
@@ -147,17 +149,17 @@ See https://googlecloudrobotics.github.io/core/how-to/deploying-grpc-service.htm
 ## (optional) How to check docker images
 
 ```bash
-# Run in background container
-sudo -E docker run -d --name demo_ui -v "$PWD":/home/u/project_copy -w /home/u/project_copy -p 9001:9001 $(minikube ip):5000/gaeus:web-ui
+# Run in background container with gdb support https://stackoverflow.com/a/46676907
+sudo -E docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -d --name demo_ui -v "$PWD":/home/u/project_copy -w /home/u/project_copy -p 9001:9001 $(minikube ip):5000/gaeus:web-ui
 
 # Find container with grep
 sudo -E docker ps -a | grep demo
 
 # Run single command in container using bash
-docker run --rm --entrypoint="/bin/bash" -v "$PWD":/home/u/project_copy -w /home/u/project_copy -p 50051:50051 --name demo_server $(minikube ip):5000/gaeus:server -c pwd
+docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined --rm --entrypoint="/bin/bash" -v "$PWD":/home/u/project_copy -w /home/u/project_copy -p 50051:50051 --name demo_server $(minikube ip):5000/gaeus:server -c pwd
 
 # Run interactive bash inside container
-docker run -it --entrypoint="/bin/bash" -v "$PWD":/home/u/project_copy -w /home/u/project_copy -p 50051:50051 --name demo_server $(minikube ip):5000/gaeus:server
+docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -it --entrypoint="/bin/bash" -v "$PWD":/home/u/project_copy -w /home/u/project_copy -p 50051:50051 --name demo_server $(minikube ip):5000/gaeus:server
 
 # See container logs
 sudo -E docker logs demo_server

@@ -1,15 +1,21 @@
-const {EmojiRequest, EmojiResponse} = require('./emoji_pb.js');
-const {EmojiServiceClient} = require('./emoji_grpc_web_pb.js');
+const {HelloRequest, RepeatHelloRequest, HelloResponse} = require('./.generated/emoji_pb.js');
+const {GreeterClient} = require('./.generated/emoji_grpc_web_pb.js');
 
-var client = new EmojiServiceClient('http://' + window.location.host);
+var client = new GreeterClient('http://' + window.location.host);
 var editor = document.getElementById('editor');
 
 window.insertEmojis = function() {
-  var request = new EmojiRequest();
-  request.setInputText(editor.innerText);
+  var request = new HelloRequest();
+  request.setName(editor.innerText);
 
-  client.insertEmojis(request, {}, (err, response) => {
-    editor.innerText = response.getOutputText();
+  // deadline exceeded
+  var deadline = new Date();
+  deadline.setSeconds(deadline.getSeconds() + 5);
+
+  client.sayHello(request, {deadline: deadline.getTime()}, (err, response) => {
+    console.log('Got error, code = ' + err.code +
+                ', message = ' + err.message);
+    editor.innerText = response.getMessage();
     window.focusEditor();
   });
 };
