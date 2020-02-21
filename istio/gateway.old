@@ -1,0 +1,121 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: server
+spec:
+  host: server.default.svc.cluster.local
+  subsets:
+  - name: v1
+    labels:
+      version: v1
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: web-gateway
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      # https://github.com/istio/istio/pull/20537
+      #protocol: GRPC-WEB
+#        protocol: HTTP2
+      protocol: HTTP
+    #tls:
+    #  httpsRedirect: true
+    hosts:
+    - "*"
+#  - port:
+#      number: 8080
+#      name: http-plain
+#      #protocol: GRPC-WEB
+#      protocol: HTTP
+#    hosts:
+#    - "*"
+#  - port:
+#      number: 443
+#      name: https
+#      #protocol: GRPC-WEB
+#      protocol: HTTPS
+#    tls:
+#      mode: SIMPLE
+#      serverCertificate: /etc/istio/ingressgateway-certs/tls.crt
+#      privateKey: /etc/istio/ingressgateway-certs/tls.key
+#    hosts:
+#    - "*"
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: virtual-service
+#  namespace: default
+spec:
+  hosts:
+  - "*"
+  gateways:
+  - web-gateway
+  http:
+  - match:
+    #- port: 80
+    #- port: 443
+    - uri:
+      # NOTE: change to package name and service name from proto file
+      prefix: /helloworld.Greeter
+    route:
+    - destination:
+        host: server
+        port:
+          number: 50051
+    corsPolicy:
+      allowOrigin:
+        - minidev
+        - www.minidev
+        - http://www.minidev
+        - http://www.minidev:31895
+        - http://minidev:31895
+#        - "http://localhost:9001"
+#        - "https://localhost:9001"
+#        - localhost
+#        - https://localhost
+#        - http://localhost
+#        - www.example.com
+#        - https://www.example.com
+#        - http://www.example.com
+#        - "*"
+      allowMethods:
+        - POST
+        - GET
+        - OPTIONS
+        - PUT
+        - DELETE
+      allowHeaders:
+        - grpc-timeout
+        - content-type
+        - keep-alive
+        - user-agent
+        - cache-control
+        - Content-Type
+        - content-type
+        - content-transfer-encoding
+        - custom-header-1
+        - x-accept-content-transfer-encoding
+        - x-accept-response-streaming
+        - x-user-agent
+        - x-grpc-web
+        - x-csrf-token
+        - authorization
+        - accept
+        - origin
+        - Origin
+      maxAge: "24h"
+      exposeHeaders:
+        - custom-header-1
+        - grpc-status
+        - grpc-message
+      allowCredentials: true
+  - route:
+    - destination:
+        host: web-ui

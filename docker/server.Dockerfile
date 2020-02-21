@@ -244,11 +244,15 @@ RUN set -ex \
   && \
   $APT autoremove \
   && \
+  # NOTE: make sure all libs linked statically
   rm -rf ~/.conan/ \
   && \
   mkdir -p /etc/ssh/ && echo ClientAliveInterval 60 >> /etc/ssh/sshd_config \
   && \
   rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/* /build/*
+  #&& \
+  # remove unused build artifacts
+  #rm -rf $PROJ_DIR/build/**.a $PROJ_DIR/build/**.o $PROJ_DIR/build/**.obj $PROJ_DIR/build/**.lib
 
 #RUN service ssh restart
 

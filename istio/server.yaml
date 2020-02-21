@@ -4,14 +4,29 @@ metadata:
   name: server
   labels:
     app: server
+#    run: server
 spec:
+  type: NodePort
+  #type: ClusterIP
   ports:
-    # Note that once we deploy this service over Istio, the grpc- prefix in the Service port name will allow Istio to recognize this as a gRPC service.
-  - name: grpc-web
+    # Note that once we deploy this service over Istio, the grpc-web prefix in the Service port name will allow Istio to recognize this as a gRPC service. https://github.com/istio/istio/pull/10064
+  - name: grpc-web-port
     # see containerPort below
     port: 50051
+    #nodePort: null
+    protocol: TCP
+    #protocol: GRPC-WEB
+    targetPort: 50051
+#    nodePort: 32291
   selector:
     app: server
+#  type: LoadBalancer
+#    ports:
+#    - name: ambassador
+#      port: 80
+#      targetPort: 80
+#    selector:
+#      service: ambassador
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
@@ -28,7 +43,9 @@ spec:
       containers:
       - name: server
         # NOTE: replace registry `ip:port` with server address
-        image: {{REGISTRY_IP}}/gaeus:server
+        image: {{REGISTRY_IP}}:{{REGISTRY_PORT}}/gaeus:server
         imagePullPolicy: Always
         ports:
         - containerPort: 50051
+          name: grpc-web-port
+          protocol: TCP

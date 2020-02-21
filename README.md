@@ -9,6 +9,10 @@ You can learn more about protobuf
 * https://developers.google.com/protocol-buffers/docs/proto3#reserved
 * https://developers.google.com/protocol-buffers/docs/reference/cpp-generated#arena
 
+## Optional
+
+Install grpc-web browser plugin `https://chrome.google.com/webstore/detail/grpc-web-developer-tools/ddamlpimmiapbcopeoifjfmoabdbfbjj`
+
 ## Guide
 
 Install `VirtualBox` https://gist.github.com/blockspacer/0237dcdea981f78f8c3ea80b8b1d037d#install-virtualbox
@@ -18,6 +22,8 @@ Install `docker` https://gist.github.com/blockspacer/0237dcdea981f78f8c3ea80b8b1
 Install `minikube` https://gist.github.com/blockspacer/0237dcdea981f78f8c3ea80b8b1d037d#install-minikube
 
 Install istio https://gist.github.com/blockspacer/0237dcdea981f78f8c3ea80b8b1d037d#install-istio
+
+For istio on minikube follow https://istio.io/docs/setup/platform-setup/minikube/
 
 Add istioctl to PATH https://gist.github.com/blockspacer/0237dcdea981f78f8c3ea80b8b1d037d#add-istioctl-to-path
 
@@ -30,40 +36,21 @@ We can now simply deploy the above configurations in the following order.
 Note that once we deploy this service over Istio, the grpc- prefix in the Service port name will allow Istio to recognize this as a gRPC service.
 
 ```bash
-export REGISTRY_IP=$(minikube ip)
-export REGISTRY_PORT=5000
-cat filter.yaml | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" | kubectl apply -f -
-cat backend.yaml | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" | <(istioctl kube-inject -f -)
-cat gateway.yaml | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" | kubectl apply -f -
-```
-
-Once the backend pod has started, we can verify that the gRPC-Web filter was correctly configured in its sidecar proxy like so:
-
-$ istioctl proxy-config listeners backend-7bf6c8f67c-8lbm7 --port 9000 -o json
-
-```json
-    "http_filters": [
-        {
-            "config": {},
-            "name": "envoy.grpc_web"
-        },
-```
-
-```bash
-minikube delete
+minikube stop
+# OR minikube delete
 # Use `--insecure-registry='192.168.39.0/24'`, see https://minikube.sigs.k8s.io/docs/tasks/docker_registry/
-minikube start --alsologtostderr --kubernetes-version v1.12.10 --memory=8192 --cpus=2 --disk-size 20GB --vm-driver virtualbox \
+minikube start --alsologtostderr --kubernetes-version v1.12.10 --memory=12288 --cpus=2 --disk-size 25GB --vm-driver virtualbox \
   --extra-config='apiserver.enable-admission-plugins=LimitRanger,NamespaceExists,NamespaceLifecycle,ResourceQuota,ServiceAccount,DefaultStorageClass,MutatingAdmissionWebhook' \
   --extra-config=apiserver.authorization-mode=RBAC \
-  --insecure-registry='10.0.0.0/24' \
-  --insecure-registry='192.168.39.0/24'
-minikube dashboard --url
+  --insecure-registry='localhost' \
+  --insecure-registry='127.0.0.1'
+# OPTIONAL: open dashboard
+minikube addons enable dashboard && kubectl get pods --all-namespaces | grep dashboard && sleep 15 && minikube dashboard
 # see http://rastko.tech/kubernetes/2019/01/01/minikube-on-mac.html
 minikube addons enable ingress
 # It will take few mins for the registry to be enabled, you can watch the status using kubectl get pods -n kube-system -w | grep registry
 # Use `--insecure-registry='192.168.39.0/24'`, see https://minikube.sigs.k8s.io/docs/tasks/docker_registry/
 minikube addons enable registry
-minikube ssh -- sudo cat /etc/hosts
 # check the CLUSTER-IP of the registry service using the command
 # Wait for the Daemonset to be running!!!
 kubectl -n kube-system get svc registry -o jsonpath='{.spec.clusterIP}'
@@ -74,7 +61,7 @@ kubectl -n kube-system get svc registry -o jsonpath='{.spec.clusterIP}'
 
 Now the kubernetes part. Copy the clusterIP of the registry service running on kube-system namespace and put it on the pod spec's image as in https://amritbera.com/journal/minikube-insecure-registry.html:
 
-```
+```yaml
 ...
 spec:
   replicas: 1
@@ -90,14 +77,17 @@ spec:
 
 Add result of `echo $(minikube ip)` into `NO_PROXY` in `/etc/systemd/system/docker.service.d/http-proxy.conf` or `~/.docker/config.json`
 
+```bash
 kubectl config use-context minikube
 
 minikube ssh -- sudo mkdir -p /etc/docker
 minikube ssh -- sudo touch /etc/docker/daemon.json
 # NOTE: can't set "insecure-registries" due to `--insecure-registry` minikube arg
+# add dns from /etc/resolv.conf into /etc/docker/daemon.json
+# also add dns (IP4.DNS[1]) from `nmcli dev show | grep 'IP4.DNS'` as in https://development.robinwinslow.uk/2016/06/23/fix-docker-networking-dns/
 cat <<EOF | minikube ssh sudo tee /etc/docker/daemon.json
 {
-    "dns": ["127.0.0.53", "10.8.13.11", "10.8.13.12", "8.8.4.4", "8.8.8.8", "10.8.13.11", "10.8.13.12"],
+    "dns": ["127.0.0.53", "8.8.4.4", "8.8.8.8"],
     "registry-mirrors":["https://docker.mirrors.ustc.edu.cn"],
     "log-driver": "json-file",
     "log-opts": {
@@ -113,15 +103,20 @@ minikube ssh -- sudo systemctl restart docker
 minikube tunnel
 # Sometimes minikube does not clean up the tunnel network properly. To force a proper cleanup:
 minikube tunnel --cleanup
+
+istioctl manifest apply
+# Enable automatic sidecar injection for defaultnamespace
+kubectl label namespace default istio-injection=enabled
 ```
 
 ## Build docker images
 
 ```bash
-sudo -E docker build --build-arg NO_PROXY=$(minikube ip),localhost,127.0.0.*,10.*,192.168.* -f docker/cxx_build_env.Dockerfile --tag gaeus:cxx_build_env . --no-cache
+sudo -E docker build --build-arg NO_PROXY=$(minikube ip),localhost,127.0.0.*,10.*,192.168.* -f docker/cxx_build_env.Dockerfile --tag (minikube ip):5000/gaeus:cxx_build_env . --no-cache
 
+# grpc_build_env is OPTIONAL
 # NOTE: you can place already cloned grpc into `GRPC_LOCAL_TO_PROJECT_PATH` and enable `BUILD_GRPC_FROM_SOURCES`
-sudo -E docker build --build-arg NO_PROXY=$(minikube ip),localhost,127.0.0.*,10.*,192.168.* --build-arg GRPC_LOCAL_TO_PROJECT_PATH=grpc --build-arg BUILD_GRPC_FROM_SOURCES=False --build-arg BUILD_GRPC_WEB_FROM_SOURCES=False -f docker/grpc_build_env.Dockerfile --tag gaeus:grpc_build_env . --no-cache
+sudo -E docker build --build-arg NO_PROXY=$(minikube ip),localhost,127.0.0.*,10.*,192.168.* --build-arg GRPC_LOCAL_TO_PROJECT_PATH=grpc --build-arg BUILD_GRPC_FROM_SOURCES=False --build-arg BUILD_GRPC_WEB_FROM_SOURCES=False -f docker/grpc_build_env.Dockerfile --tag (minikube ip):5000/gaeus:grpc_build_env . --no-cache
 
 sudo -E docker build --build-arg BUILD_TYPE=Debug --build-arg NO_PROXY=$(minikube ip),localhost,127.0.0.*,10.*,192.168.* -f docker/web-ui.Dockerfile --tag $(minikube ip):5000/gaeus:web-ui . --no-cache
 
@@ -133,14 +128,106 @@ sudo -E docker build --build-arg BUILD_TYPE=Debug --build-arg NO_PROXY=$(minikub
 
 ## Push docker images to local minikube
 
-If you want to use `minikube addons enable registry`
+If you want to use `minikube addons enable registry`, see `https://minikube.sigs.k8s.io/docs/tasks/docker_registry/`
+
+Yo may want to add output of `echo $(minikube ip)` and `echo $(minikube ip):5000` into `"insecure-registries"` in `/etc/docker/daemon.json`
 
 ```bash
-sudo -E docker push $(minikube ip):5000/gaeus:cxx_build_env
-sudo -E docker push $(minikube ip):5000/gaeus:grpc_build_env
+# reload docker after changes in in `/etc/docker/daemon.json`
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+```
+
+```bash
 sudo -E docker push $(minikube ip):5000/gaeus:server
 sudo -E docker push $(minikube ip):5000/gaeus:web-ui
+
+# cxx_build_env is OPTIONAL
+# sudo -E docker push $(minikube ip):5000/gaeus:cxx_build_env
+
+# grpc_build_env is OPTIONAL
+# sudo -E docker push $(minikube ip):5000/gaeus:grpc_build_env
+
+# Check repositories catalog
+http_proxy= no_proxy="$(minikube ip),localhost" \
+  curl -vk http://$(minikube ip):5000/v2/_catalog
+
+# Check tags in repository
+http_proxy= no_proxy="$(minikube ip),localhost" \
+  curl -vk http://$(minikube ip):5000/v2/gaeus/tags/list
 ```
+
+## Upload yaml files
+
+```bash
+# Tag your images with $(minikube ip):5000/image-name and push them.
+# Inside k8s your images will be available from localhost:5000 registry, so your k8s manifests should specify image as `localhost:5000/image-name`.
+export REGISTRY_IP=localhost
+export REGISTRY_PORT=5000
+cat web-ui.yaml | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" | kubectl apply -f -
+kubectl get pods | grep -m2 "web-ui-"
+kubectl get svc web-ui
+# check `minikube service ...... --url` via curl
+http_proxy= no_proxy="$(minikube ip),$(minikube service web-ui --url),localhost" \
+  curl -vk $(minikube service web-ui --url)
+cat filter.yaml | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" | kubectl apply -f -
+cat server.yaml | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" | kubectl apply -f <(istioctl kube-inject -f -)
+cat gateway.yaml | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" | kubectl apply -f -
+
+# use $INGRESS_HOST:$INGRESS_PORT from https://istio.io/docs/tasks/traffic-management/ingress/ingress-control/
+export INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="http2")].nodePort}')
+export SECURE_INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="https")].nodePort}')
+export INGRESS_HOST=$(minikube ip)
+
+# based on .proto file, make sure gateway contatins route for /$PROTO_PACKAGE_NAME.$PROTO_SERVICE_NAME
+export PROTO_PACKAGE_NAME=helloworld
+export PROTO_SERVICE_NAME=Greeter
+export PROTO_METHOD=SayHello
+
+http_proxy= no_proxy="$(minikube ip),$INGRESS_HOST:$INGRESS_PORT,$INGRESS_HOST,localhost" \
+    curl -vk \
+    -H "User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:73.0) Gecko/20100101 Firefox/73.0" \
+    -H "Accept: */*" \
+    -H "Host: $INGRESS_HOST:$INGRESS_PORT" \
+    -H "Accept-Language: ru,ru-RU;q=0.8,en-US;q=0.5,en;q=0.3" \
+    -H "Accept-Encoding: gzip, deflate" \
+    -H "Access-Control-Request-Method: POST" \
+    -H "Access-Control-Request-Headers: content-type,grpc-timeout,x-grpc-web,x-user-agent" \
+    -H "Referer: http://192.168.99.124:31895/" \
+    -H "Origin: http://192.168.99.124:31895" \
+    -H "Connection: keep-alive" \
+    $INGRESS_HOST:$INGRESS_PORT/$PROTO_PACKAGE_NAME.$PROTO_SERVICE_NAME/$PROTO_METHOD \
+    -X OPTIONS
+
+```
+
+Once the backend pod has started, we can verify that the gRPC-Web filter was correctly configured in its sidecar proxy like so:
+
+```bash
+kubectl get pods -n server -w | grep registry
+istioctl proxy-config listeners $(kubectl get pods | grep -m2 "server-" | cut -d " " -f 1) --port 50051 -o json
+```
+
+Must exist:
+
+```json
+    "name": "envoy.grpc_web"
+```
+
+Open in browser $INGRESS_HOST:$INGRESS_PORT to see website html frontend
+
+NOTE: ensure that web-ui connects to `$INGRESS_HOST:$INGRESS_PORT` and change `match.url.prefix` in gateway.yaml to /$PROTO_PACKAGE_NAME.$PROTO_SERVICE_NAME from proto file
+
+## NOTE: How to build docker images which will be seen by Kubernetes directly without having to push them anywhere
+
+just run
+
+```bash
+# NOTE: Later, when we no longer wish to use the Minikube host, we can undo this change by running: eval $(minikube docker-env -u)
+eval $(minikube docker-env)
+```
+
+and now you can build docker images which will be seen by Kubernetes directly without having to push them anywhere.
 
 ## (optional) Uploading the Docker image to the cloud
 
@@ -150,26 +237,41 @@ See https://googlecloudrobotics.github.io/core/how-to/deploying-grpc-service.htm
 
 ```bash
 # Run in background container with gdb support https://stackoverflow.com/a/46676907
-sudo -E docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -d --name demo_ui -v "$PWD":/home/u/project_copy -w /home/u/project_copy -p 9001:9001 $(minikube ip):5000/gaeus:web-ui
+sudo -E docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -d --name demo_server -v "$PWD":/home/u/project_copy -p 50051:50051 --name demo_server $(minikube ip):5000/gaeus:server
+
+# See container logs
+sudo -E docker logs demo_server
+```
+
+```bash
+# Run in background container with gdb support https://stackoverflow.com/a/46676907
+sudo -E docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -d --name demo_ui -v "$PWD":/home/u/project_copy -p 9001:9001 $(minikube ip):5000/gaeus:web-ui
+```
+
+Now you can open `http://localhost:9001/`
+
+```bash
+# See container logs
+sudo -E docker logs demo_ui
 
 # Find container with grep
 sudo -E docker ps -a | grep demo
 
-# Run single command in container using bash
+# Run single command in container using bash with gdb support https://stackoverflow.com/a/46676907
 docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined --rm --entrypoint="/bin/bash" -v "$PWD":/home/u/project_copy -w /home/u/project_copy -p 50051:50051 --name demo_server $(minikube ip):5000/gaeus:server -c pwd
 
 # Run interactive bash inside container
 docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -it --entrypoint="/bin/bash" -v "$PWD":/home/u/project_copy -w /home/u/project_copy -p 50051:50051 --name demo_server $(minikube ip):5000/gaeus:server
 
-# See container logs
-sudo -E docker logs demo_server
-
-# stop container
+# OPTIONAL:
+# Stop container
 sudo -E docker stop demo_server
 
+# OPTIONAL:
 # Delete container
 sudo -E docker rm demo_server
 
+# OPTIONAL:
 # To free disk space - Remove exited containers, dangling images and dangling volumes
 # see https://www.digitalocean.com/community/tutorials/how-to-remove-docker-images-containers-and-volumes
 docker rm $(docker ps -a -f status=exited -q)
@@ -232,3 +334,8 @@ HTTPS_PROXY=http://127.0.0.1:8088 \
 ```
 
 Install grpc (requres protobuf) https://github.com/grpc/grpc/blob/master/BUILDING.md
+
+## FAQ
+
+* I got error `libprotoc.so.17: cannot open shared object file: No such file or directory`
+  Try to build protobuf as static lib or use protobuf Dockerfile

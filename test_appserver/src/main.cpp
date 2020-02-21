@@ -60,7 +60,10 @@ class GreeterServiceImpl final : public Greeter::Service {
 void RunServer() {
   std::cout << "Starting server... " << std::endl;
 
+  // NOTE: dont use `0.0.0.0` https://github.com/grpc/grpc/issues/10532
   std::string server_address("0.0.0.0:50051");
+  //std::string server_address("127.0.0.1:50051");
+
   GreeterServiceImpl service;
 
   ServerBuilder builder;

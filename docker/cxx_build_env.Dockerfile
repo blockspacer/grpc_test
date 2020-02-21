@@ -62,6 +62,8 @@ ARG DPKG_FROM_APT="False"
 ARG NANO_FROM_APT="False"
 ARG MC_FROM_APT="False"
 ARG PY3_DEV_FROM_APT="False"
+# SEE: http://kefhifi.com/?p=701
+ARG GIT_WITH_OPENSSL="True"
 ARG PY3_SETUPTOOLS_FROM_APT="True"
 # NOTE: conan requires python3, python3-pip, python3-setuptools
 ARG INSTALL_CONAN="True"
@@ -70,7 +72,7 @@ ARG CONAN="conan"
 ARG CONAN_EXTRA_REPOS=""
 # Example: user -p password -r conan-local admin
 ARG CONAN_EXTRA_REPOS_USER=""
-ARG INSTALL_GO="True"
+ARG INSTALL_GO="False"
 # see git config --global http.sslCAInfo
 ARG GIT="git"
 ARG GIT_CA_INFO=""
@@ -214,7 +216,8 @@ RUN set -ex \
   $APT install -y \
                     ca-certificates \
                     software-properties-common \
-                    git \
+                    # TODO: (see GIT_WITH_OPENSSL) git depends on git-man (<< 1:2.17.1-.); however: Package git-man is not installed.
+                    #git \
                     wget \
                     locales \
   && \
@@ -225,8 +228,69 @@ RUN set -ex \
   $APT install -y \
                     make \
                     autoconf automake autotools-dev \
-                    git \
                     curl \
+  && \
+  if [ ! -z "$GIT_WITH_OPENSSL" ]; then \
+    echo 'building git from source, see ARG GIT_WITH_OPENSSL' \
+    && \
+    # Ubuntu's default git package is built with broken gnutls. Rebuild git with openssl.
+    $APT update \
+    #&& \
+    #add-apt-repository ppa:git-core/ppa  \
+    #apt-add-repository "deb http://ppa.launchpad.net/ubuntu-toolchain-r/test/ubuntu $(lsb_release -sc) main" \
+    #&& \
+    #apt-key add 1E9377A2BA9EF27F \
+    #&& \
+    #printf "deb-src http://ppa.launchpad.net/git-core/ppa/ubuntu ${CODE_NAME} main\n" >> /etc/apt/sources.list.d/git-core-ubuntu-ppa-bionic.list \
+    && \
+    $APT install -y --no-install-recommends \
+       software-properties-common \
+       fakeroot ca-certificates tar gzip zip \
+       autoconf automake bzip2 file g++ gcc \
+       #imagemagick libbz2-dev libc6-dev libcurl4-openssl-dev \
+       #libglib2.0-dev libevent-dev \
+       #libdb-dev  libffi-dev libgeoip-dev libjpeg-dev libkrb5-dev \
+       #liblzma-dev libncurses-dev \
+       #libmagickcore-dev libmagickwand-dev libmysqlclient-dev libpng-dev \
+       libssl-dev libtool libxslt-dev \
+       #libpq-dev libreadline-dev libsqlite3-dev libwebp-dev libxml2-dev \
+       #libyaml-dev zlib1g-dev \
+       make patch xz-utils unzip curl  \
+    && \
+    sed -i -- 's/#deb-src/deb-src/g' /etc/apt/sources.list \
+    && \
+    sed -i -- 's/# deb-src/deb-src/g' /etc/apt/sources.list \
+    && \
+    $APT update \
+    && \
+    $APT install -y gnutls-bin openssl \
+    && \
+    $APT install -y build-essential fakeroot dpkg-dev -y \
+    #&& \
+    #($APT remove -y git || true ) \
+    && \
+    $APT build-dep git -y \
+    && \
+    # git build deps
+    $APT install -y libcurl4-openssl-dev liberror-perl git-man -y \
+    && \
+    mkdir source-git \
+    && \
+    cd source-git/ \
+    && \
+    $APT source git \
+    && \
+    cd git-2.*.*/ \
+    && \
+    sed -i -- 's/libcurl4-gnutls-dev/libcurl4-openssl-dev/' ./debian/control \
+    && \
+    sed -i -- '/TEST\s*=\s*test/d' ./debian/rules \
+    && \
+    dpkg-buildpackage -rfakeroot -b -uc -us \
+    && \
+    dpkg -i ../git_*ubuntu*.deb \
+    ; \
+  fi \
   && \
   if [ "$NO_SSL" = "True" ]; then \
     echo 'WARNING: GIT SSL CHECKS DISABLED! SEE NO_SSL FLAG IN DOCKERFILE' \
@@ -248,6 +312,8 @@ RUN set -ex \
     echo 'WARNING: GIT_CA_INFO CHANGED! SEE GIT_CA_INFO FLAG IN DOCKERFILE' \
     && \
     ($GIT config --global http.sslCAInfo $GIT_CA_INFO || true) \
+    && \
+    ($GIT config --global http.sslCAPath $GIT_CA_INFO || true) \
     ; \
   fi \
   && \

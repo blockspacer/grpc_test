@@ -213,6 +213,6 @@ class test_appserver_conan_project(ConanFile):
         #self.cpp_info.defines.append('PDFLIB_DLL')
 
     # see `conan install . -g deploy` in https://docs.conan.io/en/latest/devtools/running_packages.html
-    def deploy(self):
+    #def deploy(self):
         # self.copy("*", dst="/usr/local/bin", src="bin", keep_path=False)
-        self.copy("*", dst="bin", src="bin", keep_path=False)
+    #    self.copy("*", dst="bin", src="bin", keep_path=False)

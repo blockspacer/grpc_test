@@ -1,6 +1,9 @@
 const {HelloRequest, RepeatHelloRequest, HelloResponse} = require('./build/emoji_pb.js');
 const {GreeterClient} = require('./build/emoji_grpc_web_pb.js');
 
+// NOTE: no ending /
+// use $INGRESS_HOST:$INGRESS_PORT from https://istio.io/docs/tasks/traffic-management/ingress/ingress-control/
+// var client = new GreeterClient('http://192.168.99.124:30209');
 var client = new GreeterClient('http://' + window.location.host);
 var editor = document.getElementById('editor');
 
@@ -13,8 +16,10 @@ window.insertEmojis = function() {
   deadline.setSeconds(deadline.getSeconds() + 5);
 
   client.sayHello(request, {deadline: deadline.getTime()}, (err, response) => {
-    console.log('Got error, code = ' + err.code +
-                ', message = ' + err.message);
+    if(err) {
+      console.log('Got error, code = ' + err.code +
+                  ', message = ' + err.message);
+    }
     editor.innerText = response.getMessage();
     window.focusEditor();
   });

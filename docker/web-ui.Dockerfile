@@ -4,9 +4,13 @@ FROM gaeus:cxx_build_env as test_webui_target
 ARG APT="apt-get -qq --no-install-recommends"
 ARG GIT="git"
 ARG NPM="npm"
+ARG NPX="npx"
+ARG NODE="node"
+ARG NODE_GYP="node-gyp"
 ARG NPM_INSTALL="npm install --unsafe-perm binding --loglevel verbose"
 #ARG PROTOC="protoc"
 ARG LS_VERBOSE="ls -artl"
+ARG PIP="pip3"
 ARG CMAKE="cmake"
 ARG CONAN="conan"
 # NOTE: if not BUILD_GRPC_FROM_SOURCES, then script uses conan protobuf package
@@ -169,11 +173,11 @@ RUN set -ex \
   && \
   ls -artl \
   && \
-  node -v \
+  $NODE -v \
   && \
   $NPM -v \
   && \
-  npx -v \
+  $NPX -v \
   && \
   # NOTE: run `npm config` in project directory
   if [ "$NO_SSL" = "True" ]; then \
@@ -202,7 +206,7 @@ RUN set -ex \
     && \
     # NOTE: run `node-gyp configure` in project directory
     # Note: node-gyp configure can give an error gyp: binding.gyp not found, but it's ok.
-    (node-gyp configure || true) \
+    ($NODE_GYP configure || true) \
     && \
     if [ "$NODE_GYP_CA_FILE" != "" ]; then \
         echo 'WARNING: NODE_GYP_CA_FILE CHANGED! SEE NODE_GYP_CA_FILE FLAG IN DOCKERFILE' \
@@ -212,7 +216,7 @@ RUN set -ex \
         && \
         # NOTE: run `node-gyp configure` in project directory
         # see https://github.com/nodejs/help/issues/979
-        (node-gyp configure --cafile=$NODE_GYP_CA_FILE || true) \
+        ($NODE_GYP configure --cafile=$NODE_GYP_CA_FILE || true) \
         ; \
     fi \
     && \
@@ -223,7 +227,7 @@ RUN set -ex \
     && \
     # NOTE: run `node-gyp configure` in project directory
     # Note: node-gyp configure can give an error gyp: binding.gyp not found, but it's ok.
-    (node-gyp configure || true) \
+    ($NODE_GYP configure || true) \
     && \
     if [ "$NODE_GYP_CA_FILE" != "" ]; then \
         echo 'WARNING: NODE_GYP_CA_FILE CHANGED! SEE NODE_GYP_CA_FILE FLAG IN DOCKERFILE' \
@@ -232,7 +236,7 @@ RUN set -ex \
         file $NODE_GYP_CA_FILE \
         && \
         # see https://github.com/nodejs/help/issues/979
-        (node-gyp configure --cafile=$NODE_GYP_CA_FILE || true) \
+        ($NODE_GYP configure --cafile=$NODE_GYP_CA_FILE || true) \
         ; \
     fi \
     && \
@@ -297,7 +301,7 @@ RUN set -ex \
   #&& \
   #ls -artl $PROTO_OUT_DIR \
   && \
-  npx webpack app.js \
+  $NPX webpack app.js \
   && \
   rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/* /build/* \
   && \
@@ -305,6 +309,7 @@ RUN set -ex \
   && \
   ($PIP uninstall conan_package_tools || true) \
   && \
+  # NOTE: make sure all libs linked statically
   rm -rf ~/.conan/ \
   && \
   ($GIT config --global --unset http.proxyAuthMethod || true) \
@@ -364,8 +369,11 @@ RUN set -ex \
   && \
   mkdir -p /etc/ssh/ && echo ClientAliveInterval 60 >> /etc/ssh/sshd_config \
   && \
-  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/* /build/*
+  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/* /build/* \
+  && \
+  # remove unused build artifacts
+  find $PROJ_DIR -type f \( -iname \*.a -o -iname \*.o -o -iname \*.obj -o -iname \*.lib \) -delete
 
-WORKDIR "$PROJ_DIR/"
+WORKDIR $PROJ_DIR
 ENTRYPOINT ["/bin/bash", "-c", "echo 'starting ui server...' && $START_APP $START_APP_OPTIONS"]
 EXPOSE 9001
