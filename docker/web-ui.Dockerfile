@@ -171,7 +171,7 @@ RUN set -ex \
   && \
   cd $PROJ_DIR/ \
   && \
-  ls -artl \
+  $LS_VERBOSE \
   && \
   $NODE -v \
   && \
@@ -198,11 +198,14 @@ RUN set -ex \
   && \
   $NPM cache clean --force \
   && \
+  # to install devDependencies
+  $NPM config set -g production false \
+  && \
   # install app deps
   if [ ! -z "$http_proxy" ]; then \
     echo 'WARNING: NODE_TLS_REJECT_UNAUTHORIZED CHANGED! SEE http_proxy IN DOCKERFILE' \
     && \
-    NODE_TLS_REJECT_UNAUTHORIZED=0 HTTP_PROXY=$http_proxy HTTPS_PROXY=$https_proxy $NPM_INSTALL -g node-gyp --unsafe-perm binding --loglevel verbose \
+    NODE_TLS_REJECT_UNAUTHORIZED=0 HTTP_PROXY=$http_proxy HTTPS_PROXY=$https_proxy $NPM_INSTALL -g --save-dev --save node-gyp webpack webpack-cli --unsafe-perm binding --loglevel verbose \
     && \
     # NOTE: run `node-gyp configure` in project directory
     # Note: node-gyp configure can give an error gyp: binding.gyp not found, but it's ok.
@@ -223,7 +226,7 @@ RUN set -ex \
     NODE_TLS_REJECT_UNAUTHORIZED=0 HTTP_PROXY=$http_proxy HTTPS_PROXY=$https_proxy $NPM_INSTALL \
     ; \
   else \
-    $NPM_INSTALL -g node-gyp \
+    $NPM_INSTALL -g --save-dev --save node-gyp webpack webpack-cli \
     && \
     # NOTE: run `node-gyp configure` in project directory
     # Note: node-gyp configure can give an error gyp: binding.gyp not found, but it's ok.
@@ -247,24 +250,24 @@ RUN set -ex \
   if [ ! -z "$http_proxy" ]; then \
     echo 'WARNING: CONAN SSL CHECKS DISABLED! SEE http_proxy IN DOCKERFILE' \
     && \
-    $CONAN remote update conan-center https://conan.bintray.com False \
+    ($CONAN remote update conan-center https://conan.bintray.com False || true) \
     && \
-    $CONAN config install $PROJ_DIR/conan/remotes_disabled_ssl/ \
+    ($CONAN config install $PROJ_DIR/conan/remotes_disabled_ssl/ || true) \
     ; \
   else \
-    $CONAN remote update conan-center https://conan.bintray.com True \
+    ($CONAN remote update conan-center https://conan.bintray.com True || true) \
     && \
-    $CONAN config install $PROJ_DIR/conan/remotes/ \
+    ($CONAN config install $PROJ_DIR/conan/remotes/ || true) \
     ; \
   fi \
   && \
   if [ ! -z "$CONAN_EXTRA_REPOS" ]; then \
-    $CONAN remote add $CONAN_EXTRA_REPOS \
+    ($CONAN remote add $CONAN_EXTRA_REPOS || true) \
     ; \
   fi \
   && \
   if [ ! -z "$CONAN_EXTRA_REPOS_USER" ]; then \
-    $CONAN $CONAN_EXTRA_REPOS_USER \
+    ($CONAN $CONAN_EXTRA_REPOS_USER || true) \
     ; \
   fi \
   && \
@@ -299,11 +302,17 @@ RUN set -ex \
   #$PROTOC -I $PROTO_DIR/ $PROTO_FILE_PATH --js_out=import_style=$PROTO_IMPORT_STYLE:$PROTO_OUT_DIR \
   #       --grpc-web_out=import_style=$GRPC_WEB_IMPORT_STYLE,mode=$GRPC_WEB_MODE:$PROTO_OUT_DIR \
   #&& \
-  #ls -artl $PROTO_OUT_DIR \
+  #$LS_VERBOSE $PROTO_OUT_DIR \
+  && \
+  npm install --save-dev \
   && \
   $NPX webpack app.js \
   && \
+  $LS_VERBOSE dist \
+  && \
   rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/* /build/* \
+  && \
+  $LS_VERBOSE \
   && \
   ($PIP uninstall conan || true) \
   && \
@@ -372,7 +381,9 @@ RUN set -ex \
   rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/* /build/* \
   && \
   # remove unused build artifacts
-  find $PROJ_DIR -type f \( -iname \*.a -o -iname \*.o -o -iname \*.obj -o -iname \*.lib \) -delete
+  find $PROJ_DIR -type f \( -iname \*.a -o -iname \*.o -o -iname \*.obj -o -iname \*.lib \) -delete \
+  && \
+  ls
 
 WORKDIR $PROJ_DIR
 ENTRYPOINT ["/bin/bash", "-c", "echo 'starting ui server...' && $START_APP $START_APP_OPTIONS"]

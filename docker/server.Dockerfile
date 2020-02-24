@@ -96,14 +96,14 @@ RUN set -ex \
   if [ ! -z "$http_proxy" ]; then \
     echo 'WARNING: CONAN SSL CHECKS DISABLED! SEE http_proxy IN DOCKERFILE' \
     && \
-    $CONAN remote update conan-center https://conan.bintray.com False \
+    ($CONAN remote update conan-center https://conan.bintray.com False || true) \
     && \
-    $CONAN config install $SUB_PROJ_DIR/conan/remotes_disabled_ssl/ \
+    ($CONAN config install $SUB_PROJ_DIR/conan/remotes_disabled_ssl/ || true) \
     ; \
   else \
-    $CONAN remote update conan-center https://conan.bintray.com True \
+    ($CONAN remote update conan-center https://conan.bintray.com True || true) \
     && \
-    $CONAN config install $SUB_PROJ_DIR/conan/remotes/ \
+    ($CONAN config install $SUB_PROJ_DIR/conan/remotes/ || true) \
     ; \
   fi \
   && \
@@ -142,12 +142,12 @@ RUN set -ex \
   cd $SUB_PROJ_DIR \
   && \
   if [ ! -z "$CONAN_EXTRA_REPOS" ]; then \
-    $CONAN remote add $CONAN_EXTRA_REPOS \
+    ($CONAN remote add $CONAN_EXTRA_REPOS || true) \
     ; \
   fi \
   && \
   if [ ! -z "$CONAN_EXTRA_REPOS_USER" ]; then \
-    $CONAN $CONAN_EXTRA_REPOS_USER \
+    ($CONAN $CONAN_EXTRA_REPOS_USER || true) \
     ; \
   fi \
   && \
