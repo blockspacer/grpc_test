@@ -19,7 +19,7 @@ function checkPrerequisites() {
     fi
     if ! kubectl describe namespace default | grep istio-injection=enabled > /dev/null ; then
        _out "Istio automatic sidecar injection needs to be enabled. See documentation/SetupLocalEnvironment.md"
-    fi   
+    fi
 }
 
 checkPrerequisites
@@ -28,7 +28,7 @@ mkdir ~/job_projects
 
 cd ~/job_projects
 
-git clone --recurse-submodules https://github.com/blockspacer/grpc_test.git 
+git clone --recurse-submodules https://github.com/blockspacer/grpc_test.git
 
 git clone --recurse-submodules https://github.com/blockspacer/conan-grpcweb.git
 
@@ -46,7 +46,7 @@ sudo mkdir -p /data/artifactory
 sudo chmod 0755 /data/artifactory
 # Artifactory runs as user 1030:1030 by default. When passing a volume to the Artifactory container, this directory (on the host) must be writable by the Artifactory user.
 sudo chown 1030:1030 /data/artifactory
-#  artifactory-cpp-ce - JFrog Artifactory Community Edition for C/C++, a completely free of charge server for Conan repositories. 
+#  artifactory-cpp-ce - JFrog Artifactory Community Edition for C/C++, a completely free of charge server for Conan repositories.
 sudo docker pull docker.bintray.io/jfrog/artifactory-cpp-ce
 sudo docker run -d --restart=always --name artifactory -v /data/artifactory:/var/opt/jfrog/artifactory -p 8081:8081 -e EXTRA_JAVA_OPTIONS='-Xms512m -Xmx2g -Xss256k -XX:+UseG1GC' docker.bintray.io/jfrog/artifactory-cpp-ce
 docker logs -f artifactory
@@ -69,7 +69,7 @@ sudo install minikube /usr/local/bin
 minikube status
 minikube stop
 # OR minikube delete
-minikube start --alsologtostderr --kubernetes-version v1.12.10 --memory=12288 --cpus=2 --disk-size 25GB --vm-driver virtualbox \
+minikube start --alsologtostderr --kubernetes-version v1.12.10 --memory=12288 --cpus=4 --disk-size 25GB --vm-driver virtualbox \
   --extra-config='apiserver.enable-admission-plugins=LimitRanger,NamespaceExists,NamespaceLifecycle,ResourceQuota,ServiceAccount,DefaultStorageClass,MutatingAdmissionWebhook' \
   --extra-config=apiserver.authorization-mode=RBAC \
   --insecure-registry='localhost' \
@@ -88,7 +88,7 @@ minikube addons enable registry
 curl -L https://git.io/getLatestIstio | sh -
 cd istio*
 echo 'export PATH=$(pwd)/bin:$PATH' >> ~/.bashrc
-# OR 
+# OR
 # sudo cp ./bin/istioctl /usr/local/bin/istioctl
 # sudo chmod +x /usr/local/bin/istioctl
 istioctl version
@@ -116,11 +116,11 @@ kubectl apply -f https://raw.githubusercontent.com/googleforgames/agones/release
 
 kubectl describe --namespace agones-system pods
 
-kubectl get gameservers 
+kubectl get gameservers
 
 kubectl describe gameserver
 
-kubectl get gs 
+kubectl get gs
 
 # echo "hello" | nc -u $(minikube ip) 7331
 
@@ -136,10 +136,10 @@ cd grpc_test
 sudo -E docker build \
   --build-arg NO_PROXY=$(minikube ip),localhost,127.0.0.*,10.*,192.168.* \
   -f docker/cxx_build_env.Dockerfile \
-  --tag $(minikube ip):5000/gaeus:cxx_build_env . \
+  --tag gaeus:cxx_build_env . \
   --no-cache
 
-sudo -E docker tag $(minikube ip):5000/gaeus:cxx_build_env gaeus:cxx_build_env
+sudo -E docker tag gaeus:cxx_build_env $(minikube ip):5000/gaeus:cxx_build_env
 
 cd ../conan_build_env
 
@@ -147,7 +147,7 @@ sudo -E docker build \
     --build-arg CONAN_INSTALL="conan install --profile gcc --build missing" \
     --build-arg CONAN_CREATE="conan create --profile gcc --build missing" \
     --build-arg CONAN_UPLOAD="conan upload --all -r=conan-local -c --retry 3 --retry-wait 10 --force" \
-    --build-arg BUILD_TYPE=Debug \
+    --build-arg BUILD_TYPE=Release \
     -f conan_build_env.Dockerfile --tag conan_build_env . --no-cache
 
 cd ../conan_c_ares
@@ -161,7 +161,7 @@ sudo -E docker build \
     --build-arg CONAN_INSTALL="conan install --profile gcc --build missing" \
     --build-arg CONAN_CREATE="conan create --profile gcc --build missing" \
     --build-arg CONAN_UPLOAD="conan upload --all -r=conan-local -c --retry 3 --retry-wait 10 --force" \
-    --build-arg BUILD_TYPE=Debug \
+    --build-arg BUILD_TYPE=Release \
     -f conan_c_ares.Dockerfile --tag conan_c_ares . --no-cache
 
 cd ../conan_protobuf
@@ -175,7 +175,7 @@ sudo -E docker build \
     --build-arg CONAN_INSTALL="conan install --profile gcc --build missing" \
     --build-arg CONAN_CREATE="conan create --profile gcc --build missing" \
     --build-arg CONAN_UPLOAD="conan upload --all -r=conan-local -c --retry 3 --retry-wait 10 --force" \
-    --build-arg BUILD_TYPE=Debug \
+    --build-arg BUILD_TYPE=Release \
     -f conan_protobuf.Dockerfile --tag conan_protobuf . --no-cache
 
 cd ../conan_zlib
@@ -189,9 +189,9 @@ sudo -E docker build \
     --build-arg CONAN_INSTALL="conan install --profile gcc --build missing" \
     --build-arg CONAN_CREATE="conan create --profile gcc --build missing" \
     --build-arg CONAN_UPLOAD="conan upload --all -r=conan-local -c --retry 3 --retry-wait 10 --force" \
-    --build-arg BUILD_TYPE=Debug \
+    --build-arg BUILD_TYPE=Release \
     -f conan_zlib.Dockerfile --tag conan_zlib . --no-cache
- 
+
 cd ../conan_openssl
 
 sudo -E docker build \
@@ -203,7 +203,7 @@ sudo -E docker build \
     --build-arg CONAN_INSTALL="conan install --profile gcc --build missing" \
     --build-arg CONAN_CREATE="conan create --profile gcc --build missing" \
     --build-arg CONAN_UPLOAD="conan upload --all -r=conan-local -c --retry 3 --retry-wait 10 --force" \
-    --build-arg BUILD_TYPE=Debug \
+    --build-arg BUILD_TYPE=Release \
     -f conan_openssl.Dockerfile --tag conan_openssl . --no-cache
 
 cd ../conan_grpc
@@ -215,7 +215,7 @@ sudo -E docker build \
     --build-arg CONAN_EXTRA_REPOS="conan-local http://$MY_IP:8081/artifactory/api/conan/conan False" \
     --build-arg CONAN_EXTRA_REPOS_USER="user -p password1 -r conan-local admin" \
     --build-arg CONAN_UPLOAD="conan upload --all -r=conan-local -c --retry 3 --retry-wait 10 --force" \
-    --build-arg BUILD_TYPE=Debug \
+    --build-arg BUILD_TYPE=Release \
     -f grpc_conan_source.Dockerfile --tag grpc_conan_repoadd_source_install . --no-cache
 
 sudo -E docker build \
@@ -225,7 +225,7 @@ sudo -E docker build \
     --build-arg CONAN_EXTRA_REPOS="conan-local http://$MY_IP:8081/artifactory/api/conan/conan False" \
     --build-arg CONAN_EXTRA_REPOS_USER="user -p password1 -r conan-local admin" \
     --build-arg CONAN_UPLOAD="conan upload --all -r=conan-local -c --retry 3 --retry-wait 10 --force" \
-    --build-arg BUILD_TYPE=Debug \
+    --build-arg BUILD_TYPE=Release \
     -f grpc_conan_build.Dockerfile --tag grpc_conan_build_package_export_test_upload . --no-cache
 
 cd ../conan-grpcweb/
@@ -237,7 +237,7 @@ sudo -E docker build \
     --build-arg CONAN_EXTRA_REPOS="conan-local http://$MY_IP:8081/artifactory/api/conan/conan False" \
     --build-arg CONAN_EXTRA_REPOS_USER="user -p password1 -r conan-local admin" \
     --build-arg CONAN_UPLOAD="conan upload --all -r=conan-local -c --retry 3 --retry-wait 10 --force" \
-    --build-arg BUILD_TYPE=Debug \
+    --build-arg BUILD_TYPE=Release \
     -f conan_grpcweb_source.Dockerfile --tag conan_grpcweb_repoadd_source_install . --no-cache
 
 sudo -E docker build \
@@ -247,28 +247,34 @@ sudo -E docker build \
     --build-arg CONAN_EXTRA_REPOS="conan-local http://$MY_IP:8081/artifactory/api/conan/conan False" \
     --build-arg CONAN_EXTRA_REPOS_USER="user -p password1 -r conan-local admin" \
     --build-arg CONAN_UPLOAD="conan upload --all -r=conan-local -c --retry 3 --retry-wait 10 --force" \
-    --build-arg BUILD_TYPE=Debug \
+    --build-arg BUILD_TYPE=Release \
     -f conan_grpcweb_build.Dockerfile --tag conan_grpcweb_build_package_export_test_upload . --no-cache
 
 cd ../grpc_test
 
 sudo -E docker build \
-  --build-arg BUILD_TYPE=Debug \
+  --build-arg BUILD_TYPE=Release \
   --build-arg NO_PROXY=$(minikube ip),localhost,127.0.0.*,10.*,192.168.* \
   --build-arg CONAN_EXTRA_REPOS="conan-local http://$MY_IP:8081/artifactory/api/conan/conan False" \
   --build-arg CONAN_EXTRA_REPOS_USER="user -p password1 -r conan-local admin" \
   -f docker/web-ui.Dockerfile \
-  --tag $(minikube ip):5000/gaeus:web-ui . \
+  --tag gaeus:web-ui . \
   --no-cache
 
+sudo -E (docker rmi $(minikube ip):5000/gaeus:web-ui || true)
+sudo -E docker tag gaeus:web-ui $(minikube ip):5000/gaeus:web-ui
+
 sudo -E docker build \
-  --build-arg BUILD_TYPE=Debug \
+  --build-arg BUILD_TYPE=Release \
   --build-arg NO_PROXY=$(minikube ip),localhost,127.0.0.*,10.*,192.168.* \
   --build-arg CONAN_EXTRA_REPOS="conan-local http://$MY_IP:8081/artifactory/api/conan/conan False" \
   --build-arg CONAN_EXTRA_REPOS_USER="user -p password1 -r conan-local admin" \
   -f docker/server.Dockerfile \
-  --tag $(minikube ip):5000/gaeus:server . \
+  --tag gaeus:server . \
   --no-cache
+
+sudo -E (docker rmi $(minikube ip):5000/gaeus:server || true)
+sudo -E docker tag gaeus:server $(minikube ip):5000/gaeus:server
 
 # Ensure that docker is configured to use 192.168.39.0/24 as insecure registry
 # see https://minikube.sigs.k8s.io/docs/tasks/docker_registry/

@@ -39,7 +39,7 @@ Note that once we deploy this service over Istio, the grpc- prefix in the Servic
 minikube stop
 # OR minikube delete
 # Use `--insecure-registry='192.168.39.0/24'`, see https://minikube.sigs.k8s.io/docs/tasks/docker_registry/
-minikube start --alsologtostderr --kubernetes-version v1.12.10 --memory=12288 --cpus=2 --disk-size 25GB --vm-driver virtualbox \
+minikube start --alsologtostderr --kubernetes-version v1.12.10 --memory=14288 --cpus=2 --disk-size 25GB --vm-driver virtualbox \
   --extra-config='apiserver.enable-admission-plugins=LimitRanger,NamespaceExists,NamespaceLifecycle,ResourceQuota,ServiceAccount,DefaultStorageClass,MutatingAdmissionWebhook' \
   --extra-config=apiserver.authorization-mode=RBAC \
   --insecure-registry='localhost' \
@@ -116,10 +116,10 @@ kubectl label namespace default istio-injection=enabled
 sudo -E docker build \
   --build-arg NO_PROXY=$(minikube ip),localhost,127.0.0.*,10.*,192.168.* \
   -f docker/cxx_build_env.Dockerfile \
-  --tag $(minikube ip):5000/gaeus:cxx_build_env . \
+  --tag gaeus:cxx_build_env . \
   --no-cache
 
-sudo -E docker tag $(minikube ip):5000/gaeus:cxx_build_env gaeus:cxx_build_env
+sudo -E docker tag gaeus:cxx_build_env $(minikube ip):5000/gaeus:cxx_build_env
 
 # grpc_build_env is OPTIONAL
 # NOTE: you can place already cloned grpc into `GRPC_LOCAL_TO_PROJECT_PATH` and enable `BUILD_GRPC_FROM_SOURCES`
@@ -128,25 +128,29 @@ sudo -E docker tag $(minikube ip):5000/gaeus:cxx_build_env gaeus:cxx_build_env
 export MY_IP=$(ip route get 8.8.8.8 | sed -n '/src/{s/.*src *\([^ ]*\).*/\1/p;q}')
 
 sudo -E docker build \
-  --build-arg BUILD_TYPE=Debug \
+  --build-arg BUILD_TYPE=Release \
   --build-arg NO_PROXY=$(minikube ip),localhost,127.0.0.*,10.*,192.168.* \
   --build-arg CONAN_EXTRA_REPOS="conan-local http://$MY_IP:8081/artifactory/api/conan/conan False" \
   --build-arg CONAN_EXTRA_REPOS_USER="user -p password1 -r conan-local admin" \
   -f docker/web-ui.Dockerfile \
-  --tag $(minikube ip):5000/gaeus:web-ui . \
+  --tag gaeus:web-ui . \
   --no-cache
 
+sudo -E docker tag gaeus:web-ui $(minikube ip):5000/gaeus:web-ui
+
 # TODO: INSTALL_GRPC_FROM_CONAN
-# NOTE: --build-arg BUILD_TYPE=Debug
+# NOTE: --build-arg BUILD_TYPE=Release
 # NOTE: to add custom conan repo replace YOUR_REPO_URL_HERE in: --build-arg CONAN_EXTRA_REPOS="conan-local http://YOUR_REPO_URL_HERE:8081/artifactory/api/conan/conan False" --build-arg CONAN_EXTRA_REPOS_USER="user -p password -r conan-local admin"
 sudo -E docker build \
-  --build-arg BUILD_TYPE=Debug \
+  --build-arg BUILD_TYPE=Release \
   --build-arg NO_PROXY=$(minikube ip),localhost,127.0.0.*,10.*,192.168.* \
   --build-arg CONAN_EXTRA_REPOS="conan-local http://$MY_IP:8081/artifactory/api/conan/conan False" \
   --build-arg CONAN_EXTRA_REPOS_USER="user -p password1 -r conan-local admin" \
   -f docker/server.Dockerfile \
-  --tag $(minikube ip):5000/gaeus:server . \
+  --tag gaeus:server . \
   --no-cache
+
+sudo -E docker tag gaeus:server $(minikube ip):5000/gaeus:server
 ```
 
 ## Push docker images to local minikube

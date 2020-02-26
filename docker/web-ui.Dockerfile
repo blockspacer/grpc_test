@@ -1,5 +1,5 @@
 # allows individual sections to be run by doing: docker build --target ...
-FROM gaeus:cxx_build_env as test_webui_target
+FROM gaeus:cxx_build_env as build_target
 
 ARG APT="apt-get -qq --no-install-recommends"
 ARG GIT="git"
@@ -7,7 +7,8 @@ ARG NPM="npm"
 ARG NPX="npx"
 ARG NODE="node"
 ARG NODE_GYP="node-gyp"
-ARG NPM_INSTALL="npm install --unsafe-perm binding --loglevel verbose"
+ARG NPM_INSTALL="npm install --loglevel verbose"
+ARG NPM_INSTALL_UNSAFE="npm install --unsafe-perm binding --loglevel verbose"
 #ARG PROTOC="protoc"
 ARG LS_VERBOSE="ls -artl"
 ARG PIP="pip3"
@@ -94,7 +95,7 @@ RUN set -ex \
     file $NPM_CA_FILE \
     && \
     # see https://github.com/nodejs/help/issues/979
-    ($NPM_INSTALL --cafile $NPM_CA_FILE custom_npm_ca_file || true) \
+    ($NPM_INSTALL_UNSAFE --cafile $NPM_CA_FILE custom_npm_ca_file || true) \
     ; \
   fi \
   && \
@@ -205,7 +206,7 @@ RUN set -ex \
   if [ ! -z "$http_proxy" ]; then \
     echo 'WARNING: NODE_TLS_REJECT_UNAUTHORIZED CHANGED! SEE http_proxy IN DOCKERFILE' \
     && \
-    NODE_TLS_REJECT_UNAUTHORIZED=0 HTTP_PROXY=$http_proxy HTTPS_PROXY=$https_proxy $NPM_INSTALL -g --save-dev --save node-gyp webpack webpack-cli --unsafe-perm binding --loglevel verbose \
+    NODE_TLS_REJECT_UNAUTHORIZED=0 HTTP_PROXY=$http_proxy HTTPS_PROXY=$https_proxy $NPM_INSTALL_UNSAFE -g --save-dev --save node-gyp webpack webpack-cli --unsafe-perm binding --loglevel verbose \
     && \
     # NOTE: run `node-gyp configure` in project directory
     # Note: node-gyp configure can give an error gyp: binding.gyp not found, but it's ok.
@@ -223,10 +224,10 @@ RUN set -ex \
         ; \
     fi \
     && \
-    NODE_TLS_REJECT_UNAUTHORIZED=0 HTTP_PROXY=$http_proxy HTTPS_PROXY=$https_proxy $NPM_INSTALL \
+    NODE_TLS_REJECT_UNAUTHORIZED=0 HTTP_PROXY=$http_proxy HTTPS_PROXY=$https_proxy $NPM_INSTALL_UNSAFE \
     ; \
   else \
-    $NPM_INSTALL -g --save-dev --save node-gyp webpack webpack-cli \
+    $NPM_INSTALL_UNSAFE -g --save-dev --save node-gyp webpack webpack-cli \
     && \
     # NOTE: run `node-gyp configure` in project directory
     # Note: node-gyp configure can give an error gyp: binding.gyp not found, but it's ok.
@@ -243,7 +244,7 @@ RUN set -ex \
         ; \
     fi \
     && \
-    $NPM_INSTALL \
+    $NPM_INSTALL_UNSAFE \
     ; \
   fi \
   && \
@@ -304,7 +305,14 @@ RUN set -ex \
   #&& \
   #$LS_VERBOSE $PROTO_OUT_DIR \
   && \
-  npm install --save-dev \
+  # install app deps
+  if [ ! -z "$http_proxy" ]; then \
+    NODE_TLS_REJECT_UNAUTHORIZED=0 HTTP_PROXY=$http_proxy HTTPS_PROXY=$https_proxy $NPM_INSTALL --save-dev \
+    ; \
+  else \
+    $NPM_INSTALL --save-dev \
+    ; \
+  fi \
   && \
   $NPX webpack app.js \
   && \
@@ -383,8 +391,66 @@ RUN set -ex \
   # remove unused build artifacts
   find $PROJ_DIR -type f \( -iname \*.a -o -iname \*.o -o -iname \*.obj -o -iname \*.lib \) -delete \
   && \
-  ls
+  ls \
+  # Create a "nobody" non-root user for the next image by crafting an /etc/passwd
+  # file that the next image can copy in. This is necessary since the next image
+  # is based on scratch, which doesn't have adduser, cat, echo, or even sh.
+  && \
+  echo "nobody:x:65534:65534:Nobody:/:" > /etc_passwd
 
+# ---- Release ----
+# The multi-stage build allows using multiple FROM commands in the same Dockerfile.
+# The last FROM command produces the final Docker image,
+# all other images are intermediate images (no final Docker image is produced, but all layers are cached).
+# NOTE: scratch doesn’t have programs like adduser nor even echo
+# FROM scratch AS ...
+FROM ubuntu:18.04 AS release_webui_target
+ARG APT="apt-get -qq --no-install-recommends"
+ENV LC_ALL=C.UTF-8 \
+    LANG=en_US.UTF-8 \
+    LANGUAGE=en_US:en \
+    PATH=/usr/bin/:/usr/local/bin/:/go/bin:/usr/local/go/bin:/usr/local/include/:/usr/local/lib/:/usr/lib/clang/6.0/include:/usr/lib/llvm-6.0/include/:$PATH \
+    LD_LIBRARY_PATH=/usr/local/lib/:$LD_LIBRARY_PATH \
+    ROOT_DIR=/web-ui-copy \
+    PROJ_DIR=/web-ui-copy/web-ui \
+    PROTO_DIR=/web-ui-copy/proto \
+    OS_ARCH=x64 \
+    START_APP="python3" \
+    START_APP_OPTIONS="-m http.server 9001"
+RUN set -ex \
+  && \
+  echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections \
+  && \
+  mkdir -p $ROOT_DIR \
+  && \
+  if [ ! -z "$http_proxy" ]; then \
+    echo "Acquire::http::Verify-Peer \"false\";" >> /etc/apt/apt.conf.d/00proxy \
+    && \
+    echo "Acquire::https::Verify-Peer \"false\";" >> /etc/apt/apt.conf.d/00proxy \
+    ; \
+  fi \
+  && \
+  $APT update \
+  && \
+  $APT install -y python3 \
+  && \
+  $APT clean \
+  && \
+  $APT autoremove \
+  && \
+  rm -rf /etc/apt/apt.conf.d/00proxy \
+  && \
+  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/* /build/*
+COPY --from=build_target $PROJ_DIR $PROJ_DIR
+# Copy the /etc_passwd file we created in the builder stage into /etc/passwd in
+# the target stage. This creates a new non-root user as a security best
+# practice.
+COPY --from=build_target /etc_passwd /etc/passwd
+# Note that to avoid errors we also had to copy in the SSL certs from the build environment, since we are contacting an https:// url
+# COPY --from=build_target /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=build_target /etc/ssl/certs/ /etc/ssl/certs
 WORKDIR $PROJ_DIR
+# Run as the new non-root by default
+USER nobody
 ENTRYPOINT ["/bin/bash", "-c", "echo 'starting ui server...' && $START_APP $START_APP_OPTIONS"]
 EXPOSE 9001

@@ -1,5 +1,5 @@
 # allows individual sections to be run by doing: docker build --target ...
-FROM gaeus:cxx_build_env as test_appserver_target
+FROM gaeus:cxx_build_env as build_target
 # NOTE: if not BUILD_GRPC_FROM_SOURCES, then script uses conan protobuf package
 ARG BUILD_TYPE=Release
 # NOTE: cmake from apt may be outdated
@@ -181,6 +181,12 @@ RUN set -ex \
   && \
   chmod +x /usr/local/bin/test_appserver_core \
   && \
+  # Extracting dynamic libraries for executable
+  ldd /usr/local/bin/test_appserver_core | tr -s '[:blank:]' '\n' | grep '^/' | \
+    xargs -I % sh -c 'mkdir -p $(dirname extracted_deps%); cp % extracted_deps%;' \
+  && \
+  mv ./extracted_deps /extracted_deps \
+  && \
   rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/* /build/* \
   && \
   # remove unused project copy after install
@@ -249,7 +255,12 @@ RUN set -ex \
   && \
   mkdir -p /etc/ssh/ && echo ClientAliveInterval 60 >> /etc/ssh/sshd_config \
   && \
-  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/* /build/*
+  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/* /build/* \
+  # Create a "nobody" non-root user for the next image by crafting an /etc/passwd
+  # file that the next image can copy in. This is necessary since the next image
+  # is based on scratch, which doesn't have adduser, cat, echo, or even sh.
+  && \
+  echo "nobody:x:65534:65534:Nobody:/:" > /etc_passwd
   #&& \
   # remove unused build artifacts
   #rm -rf $PROJ_DIR/build/**.a $PROJ_DIR/build/**.o $PROJ_DIR/build/**.obj $PROJ_DIR/build/**.lib
@@ -258,16 +269,13 @@ RUN set -ex \
 
 #ENV DEBIAN_FRONTEND teletype
 
-# default
-FROM        test_appserver_target as test_appserver_run
-ENV LC_ALL=C.UTF-8 \
-    LANG=en_US.UTF-8 \
-    LANGUAGE=en_US:en \
-    PATH=/usr/bin/:/usr/local/bin/:/usr/local/include/:/usr/local/lib/:/usr/lib/clang/6.0/include:/usr/lib/llvm-6.0/include/:$PATH \
-    LD_LIBRARY_PATH=/usr/local/lib/:$LD_LIBRARY_PATH \
-    WDIR=/opt \
-    START_APP=/usr/local/bin/test_appserver_core \
-    START_APP_OPTIONS=
+# ---- Release ----
+# The multi-stage build allows using multiple FROM commands in the same Dockerfile.
+# The last FROM command produces the final Docker image,
+# all other images are intermediate images (no final Docker image is produced, but all layers are cached).
+# NOTE: scratch doesn’t have programs like adduser nor even echo
+FROM scratch AS release_server_target
+# FROM ubuntu:18.04 AS release_server_target
 # see https://github.com/grpc/grpc/blob/master/doc/environment_variables.md
 # GRPC_VERBOSITY DEBUG - log all gRPC messages
 # GRPC_VERBOSITY INFO - log INFO and ERROR message
@@ -279,13 +287,31 @@ ARG GRPC_TRACE=
 ARG GRPC_ABORT_ON_LEAKS=0
 ARG GRPC_POLL_STRATEGY=poll
 ARG GRPC_CLIENT_CHANNEL_BACKUP_POLL_INTERVAL_MS=5000
-ENV GRPC_VERBOSITY=$GRPC_VERBOSITY \
+ENV LC_ALL=C.UTF-8 \
+    LANG=en_US.UTF-8 \
+    LANGUAGE=en_US:en \
+    PATH=/usr/bin/:/usr/local/bin/:/go/bin:/usr/local/go/bin:/usr/local/include/:/usr/local/lib/:/usr/lib/clang/6.0/include:/usr/lib/llvm-6.0/include/:$PATH \
+    LD_LIBRARY_PATH=/usr/local/lib/:/usr/lib64/:/lib64/:/:$LD_LIBRARY_PATH \
+    OS_ARCH=x64 \
+    WDIR=/opt \
+    GRPC_VERBOSITY=$GRPC_VERBOSITY \
     GRPC_TRACE=$GRPC_TRACE \
     GRPC_ABORT_ON_LEAKS=$GRPC_ABORT_ON_LEAKS \
     GRPC_POLL_STRATEGY=$GRPC_POLL_STRATEGY \
     GRPC_CLIENT_CHANNEL_BACKUP_POLL_INTERVAL_MS=$GRPC_CLIENT_CHANNEL_BACKUP_POLL_INTERVAL_MS \
     GRPC_DEFAULT_SSL_ROOTS_FILE_PATH=$GRPC_DEFAULT_SSL_ROOTS_FILE_PATH
+COPY --from=build_target /usr/local/bin/test_appserver_core /test_appserver_core
+# Copy the /etc_passwd file we created in the builder stage into /etc/passwd in
+# the target stage. This creates a new non-root user as a security best
+# practice.
+COPY --from=build_target /etc_passwd /etc/passwd
+# place dynamic libs near executable file
+COPY --from=build_target /extracted_deps /
+# Note that to avoid errors we also had to copy in the SSL certs from the build environment, since we are contacting an https:// url
+#COPY --from=build_target /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=build_target /etc/ssl/certs/ /etc/ssl/certs
+# Run as the new non-root by default
+USER nobody
+ENTRYPOINT ["/test_appserver_core"]
 WORKDIR $WDIR
-ENTRYPOINT ["/bin/bash", "-c", "echo 'starting $START_APP...' && $START_APP $START_APP_OPTIONS"]
-#ENTRYPOINT [ "/usr/local/bin/test_appserver_core" ]
 EXPOSE 50051
