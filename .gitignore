@@ -96,6 +96,8 @@ build/
 **/generated
 
 *.crt
+*.key
+*.csr
 .ca-certificates/**
 !.ca-certificates/.gitkeep
 *.log
@@ -106,10 +108,8 @@ build/
 !package.json
 
 # Common
-*.pyc
 *.pyo
 *.exe
-*.dll
 .installed.cfg
 develop-eggs
 dist
@@ -193,7 +193,6 @@ chmod
 .evolution
 .fce*
 .feh*
-.feh*
 Music/
 Documents/
 Videos/
@@ -255,7 +254,6 @@ HoN
 .dmenu_cache
 .ratpoison_history
 .sqlite_history
-*.o
 *.hi
 *.errors
 .mission-control/
@@ -284,7 +282,6 @@ env/
 .cups/
 .authinfo
 .mongo_log
-.dbshell
 .DS_Store
 .CFUserTextEncoding
 .newsrc-dribble
@@ -302,7 +299,6 @@ Eclipse/
 bin/eclipse
 bin/lein
 .Trash/
-.pentadactyl/
 .rvmrc
 .mplayer/
 .serverauth*
@@ -310,7 +306,6 @@ bin/lein
 .emacs.d/semanticdb/
 .emacs.d/url/
 iMacros/
-.elinks/
 .mutt/
 .byobu/
 emu/
@@ -362,7 +357,6 @@ News/
 .viminfo*
 .wily*
 .fonts/
-build/
 *.rdb
 node_modules/
 .calc_history
@@ -479,7 +473,6 @@ idea/
 .repljs_history
 Snapshots/
 backup/
-games/
 .earthquake/
 .ocamlinit
 .opam/
@@ -700,11 +693,8 @@ snap/
 .zcash-params/
 .zcash/
 FiraxisLive/
-.multirust
-.rustup/
 .yarnrc
 .matplotlib/
-.node_repl_history
 servers/
 .slocdata/
 anaconda2/
@@ -804,3 +794,4 @@ miniconda3/
 # Custom
 \grpc
 \grpc-web
+*.pem
