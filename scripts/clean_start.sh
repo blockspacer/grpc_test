@@ -305,6 +305,15 @@ sudo -E docker push $(minikube ip):5000/gaeus:server
 
 sudo -E docker push $(minikube ip):5000/gaeus:web-ui
 
+TODO!!!!
+use ../tools/dockerized_gen_certs.sh
+
+TODO!!!!
+deploy keycloak
+
+TODO!!!!
+use ../istio/deploy.sh
+
 cd istio
 # Tag your images with $(minikube ip):5000/image-name and push them.
 # Inside k8s your images will be available from localhost:5000 registry, so your k8s manifests should specify image as `localhost:5000/image-name`.
@@ -312,6 +321,8 @@ export REGISTRY_IP=localhost # Requires pushing of images to registry
 #export REGISTRY_IP=$(minikube ip) # Requires `eval $(minikube docker-env)`
 export REGISTRY_PORT=5000
 cat web-ui.yaml | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" | kubectl apply -f -
+# NOTE: waits by pod label, see -lapp=...
+kubectl wait pod -lapp=web-ui --for=condition=Ready --timeout=30s -n default
 kubectl get pods | grep -m2 "web-ui-"
 kubectl get svc web-ui
 # check `minikube service ...... --url` via curl
@@ -319,6 +330,8 @@ http_proxy= no_proxy="$(minikube ip),$(minikube service web-ui --url),localhost"
   curl -vk $(minikube service web-ui --url)
 cat filter.yaml | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" | kubectl apply -f -
 cat server.yaml | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" | kubectl apply -f <(istioctl kube-inject -f -)
+# NOTE: waits by pod label, see -lapp=...
+kubectl wait pod -lapp=server --for=condition=Ready --timeout=30s -n default
 cat gateway.yaml | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" | kubectl apply -f -
 
 # use $INGRESS_HOST:$INGRESS_PORT from https://istio.io/docs/tasks/traffic-management/ingress/ingress-control/

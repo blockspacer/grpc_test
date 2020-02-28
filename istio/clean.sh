@@ -8,23 +8,41 @@ cat gateway.yaml \
   | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
   | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
   | kubectl delete --ignore-not-found=true -f -
+
 cat server.yaml \
   | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
   | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
   | kubectl delete --ignore-not-found=true -f -
+
 cat web-ui.yaml \
   | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
   | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
   | kubectl delete --ignore-not-found=true -f -
+
+cat app-external-authz-envoyfilter-sidecar.yaml \
+  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
+  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
+  | kubectl delete --ignore-not-found=true -f -
+
 cat filter.yaml \
   | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
   | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
   | kubectl delete --ignore-not-found=true -f -
+
+cat auth.yaml \
+  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
+  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
+  | kubectl delete --ignore-not-found=true -f -
+
 cat authservice-configmap-template-for-authn.yaml \
   | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
   | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
   | kubectl delete --ignore-not-found=true -f -
+
 kubectl delete destinationrules --all -n default
+
 kubectl delete gateway --all -n default
+
 kubectl delete virtualservices --all -n default
+
 kubectl delete pod --all -n default

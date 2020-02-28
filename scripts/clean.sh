@@ -1,12 +1,14 @@
 #!/bin/bash
 
+TODO!!!
+
 namesp=$1
 
 if [ -z "$namesp" ]; then
     namespace="tutorial"
 fi
 
-contentvs=`kubectl get virtualservice -n "$namesp" 2>/dev/null` 
+contentvs=`kubectl get virtualservice -n "$namesp" 2>/dev/null`
 
 if [ -z "$contentvs" ]; then
     echo "No Virtual Services in $namesp namespace."
@@ -21,7 +23,7 @@ else
             kubectl delete virtualservice "$name" -n "$namesp"
         fi
     done
-    
+
 fi
 
 contentdr=`kubectl get destinationrule -n "$namesp" 2>/dev/null`
@@ -37,7 +39,7 @@ else
     do
         kubectl delete destinationrule "$name" -n "$namesp"
     done
-    
+
 fi
 
 contentse=`kubectl get serviceentry -n "$namesp" 2>/dev/null`
@@ -53,7 +55,7 @@ else
     do
         kubectl delete serviceentry "$name" -n "$namesp"
     done
-    
+
 fi
 
 contentp=`kubectl get policy -n "$namesp" 2>/dev/null`
@@ -69,7 +71,7 @@ else
     do
         kubectl delete policy "$name" -n "$namesp"
     done
-    
+
 fi
 
 contentsr=`kubectl get servicerole -n "$namesp" 2>/dev/null`
@@ -85,7 +87,7 @@ else
     do
         kubectl delete servicerole "$name" -n "$namesp"
     done
-    
+
 fi
 
 contentsrb=`kubectl get servicerolebinding -n "$namesp" 2>/dev/null`
@@ -101,7 +103,7 @@ else
     do
         kubectl delete servicerolebinding "$name" -n "$namesp"
     done
-    
+
 fi
 
 contentrbc=`kubectl get rbacconfig -n "$namesp" 2>/dev/null`
@@ -117,7 +119,7 @@ else
     do
         kubectl delete rbacconfig "$name" -n "$namesp"
     done
-    
+
 fi
 
 contentcrbc=`kubectl get ClusterRbacConfig -n "$namesp" 2>/dev/null`
@@ -133,5 +135,5 @@ else
     do
         kubectl delete ClusterRbacConfig "$name" -n "$namesp"
     done
-    
+
 fi

@@ -1,16 +1,28 @@
 apiVersion: "authentication.istio.io/v1alpha1"
 kind: "Policy"
 metadata:
-  name: "frontend-jwt"
+  name: "authn-policy"
+  namespace: default
 spec:
   targets:
-  - name: server
+    # Enable authentication for the following services.
+    # Note: `request.auth` only appears on the ServiceRoleBinding's or AuthorizationPolicy's for the following services
+#  - name: server
+  - name: web-ui
+  #peers:
+  #  - mtls:
+  #      mode: STRICT
+  originIsOptional: true
   origins:
+# see https://discuss.istio.io/t/jwt-origin-auth-on-ingress-for-some-hosts-but-not-for-others/3828/4
+# see https://codingthunderbolt.blogspot.com/2019/08/sso-wso2-api-manager-and-keycloak.html
   - jwt:
-      issuer: "testing@secure.istio.io"
-      jwksUri: "https://raw.githubusercontent.com/istio/istio/release-1.2/security/tools/jwt/samples/jwks.json"
-      trigger_rules:
-      - excluded_paths:
-        - exact: /_healthz
-        - exact: /
+      issuer: "https://keycloak.example.com:8443/auth/realms/master"
+      jwksUri: "https://keycloak.example.com:8443/auth/realms/master/protocol/openid-connect/certs"
+#      issuer: "testing@secure.istio.io"
+#      jwksUri: "https://raw.githubusercontent.com/istio/istio/release-1.2/security/tools/jwt/samples/jwks.json"
+#      trigger_rules:
+#      - excluded_paths:
+#        - exact: /_healthz
+#        - exact: /
   principalBinding: USE_ORIGIN

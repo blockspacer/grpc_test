@@ -8,7 +8,7 @@ spec:
   servers:
     - port:
         number: 80
-        name: http
+        name: http-80
         protocol: HTTP
 #        protocol: HTTP2
       tls:
@@ -18,7 +18,7 @@ spec:
 #     - "httpbin.example.com"
     - port:
         number: 443
-        name: https
+        name: https-443
         #protocol: GRPC-WEB
         protocol: HTTPS
 # see https://istio.io/docs/tasks/traffic-management/ingress/secure-ingress-mount/
@@ -49,6 +49,24 @@ spec:
         - uri:
 # NOTE: change to package name and service name from proto file
             prefix: /helloworld.Greeter
+#        - uri:
+#            # Allow the Authentication Request Callback to get routed to productpage so it can be intercepted by the authservice
+#            prefix: /productpage/oauth
+#        - uri:
+#            # Allow the authservice logout request to get routed to productpage so it can be intercepted by the authservice
+#            exact: /authservice_logout
+#        - uri:
+#            exact: /productpage
+#        - uri:
+#            prefix: /productpage/oauth # makes sure then Authentication Request Callback gets routed to the productpage
+#        - uri:
+#            prefix: /static
+#        - uri:
+#            exact: /login
+#        - uri:
+#            exact: /logout
+#        - uri:
+#            prefix: /api/v1/
       route:
         - destination:
 #            host: server.default.svc.cluster.local

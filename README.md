@@ -242,6 +242,8 @@ export REGISTRY_IP=localhost # Requires pushing of images to registry
 #export REGISTRY_IP=$(minikube ip) # Requires `eval $(minikube docker-env)`
 export REGISTRY_PORT=5000
 cat web-ui.yaml | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" | kubectl apply -f -
+# NOTE: waits by pod label, see -lapp=...
+kubectl wait pod -lapp=web-ui --for=condition=Ready --timeout=30s -n default
 kubectl get pods | grep -m2 "web-ui-"
 kubectl get svc web-ui
 # check `minikube service ...... --url` via curl
@@ -250,6 +252,8 @@ http_proxy= no_proxy="$(minikube ip),$(minikube service web-ui --url),localhost"
 cat filter.yaml | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" | kubectl apply -f -
 cat authservice-configmap-template-for-authn.yaml | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" | kubectl apply -f -
 cat server.yaml | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" | kubectl apply -f <(istioctl kube-inject -f -)
+# NOTE: waits by pod label, see -lapp=...
+kubectl wait pod -lapp=server --for=condition=Ready --timeout=30s -n default
 http_proxy= no_proxy="$(minikube ip),$(minikube service server --url),localhost" \
   curl -vk $(minikube service server --url)
 cat gateway.yaml | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" | kubectl apply -f -
@@ -428,6 +432,12 @@ Install grpc (requres protobuf) https://github.com/grpc/grpc/blob/master/BUILDIN
 ## Misc
 
 see `chrome://flags/#allow-insecure-localhost`
+
+## Keycloak
+
+TODO!!!!
+deploy keycloak
+see https://gist.github.com/blockspacer/211a932cb0a535a1b098ec0ac562eeb8#gistcomment-3147793
 
 ## TLS Certs
 
