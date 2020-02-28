@@ -1,0 +1,66 @@
+#
+# A ConfigMap which contains the configuration of the authservice.
+# In bookinfo-with-authservice-template.yaml the authservice container is created
+# with this ConfigMap volume mounted inside the container at /etc/authservice, which
+# is the location where the authservice expects the file to exist.
+#
+
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: app-authservice-configmap
+data:
+  config.json: |
+    {
+      "listen_address": "127.0.0.1",
+      "listen_port": "10003",
+      "log_level": "trace",
+      "threads": 8,
+      "chains": [
+        {
+          "name": "idp_filter_chain",
+          "filters": [
+          {
+            "oidc":
+              {
+                "authorization": {
+                  "scheme": "https",
+                  "hostname": "10.108.8.182",
+                  "path": "/auth/realms/master/protocol/openid-connect/auth",
+                  "port": "8443"
+                },
+                "token": {
+                  "scheme": "https",
+                  "hostname": "10.108.8.182",
+                  "path": "/auth/realms/master/protocol/openid-connect/token",
+                  "port": "8443"
+                },
+                "jwks": "{\"keys\":[{\"kid\":\"ZWFRTmFjFnjRVLVNtQztp8x1Ck5gWvggY4Mr8G0-dbU\",\"kty\":\"RSA\",\"alg\":\"RS256\",\"use\":\"sig\",\"n\":\"0DKS3kbN_eA1gS4bNYg-554TPPpPgLt2f78omkddbmVbwTLtr8ZLDkvOpwWkmr5ZKZSfA0SkLSsx3uoEWlybs9RaYYWxhufv7Z9QMTagsjludTBY6P4rGtkue3nhQG2MsFo1OvmzdvGVfv6FEJwu1odNgjCAppuhdHDvZKs4dT-GL4tl9IEV4QcGnUVlEaFmUnye940EM_hacQQDX_q9abJzQF5WE525NLIcySjVgCalc0c4Aw3D-as9JGFDwpYij2zpPikAF5tzmNGtyE5JRsp47MCTMQ06-V6HZNNnODiUBY7QwhlRqSZM-uOrNwXGiuDbsvfVFqgjC3mxQkFv7w\",\"e\":\"AQAB\",\"x5c\":[\"MIICmzCCAYMCBgFwhtC7AjANBgkqhkiG9w0BAQsFADARMQ8wDQYDVQQDDAZtYXN0ZXIwHhcNMjAwMjI3MTMyMTMxWhcNMzAwMjI3MTMyMzExWjARMQ8wDQYDVQQDDAZtYXN0ZXIwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDQMpLeRs394DWBLhs1iD7nnhM8+k+Au3Z/vyiaR11uZVvBMu2vxksOS86nBaSavlkplJ8DRKQtKzHe6gRaXJuz1FphhbGG5+/tn1AxNqCyOW51MFjo/isa2S57eeFAbYywWjU6+bN28ZV+/oUQnC7Wh02CMICmm6F0cO9kqzh1P4Yvi2X0gRXhBwadRWURoWZSfJ73jQQz+FpxBANf+r1psnNAXlYTnbk0shzJKNWAJqVzRzgDDcP5qz0kYUPCliKPbOk+KQAXm3OY0a3ITklGynjswJMxDTr5Xodk02c4OJQFjtDCGVGpJkz646s3BcaK4Nuy99UWqCMLebFCQW/vAgMBAAEwDQYJKoZIhvcNAQELBQADggEBAL1qE05YKnvNuPmOHXO6d0fmknWGFx7UTdvmN0PNjvFLBu3ERXpomuBD9QGyRO2d+fVa/fHLrb9RbG7G6x4y0KyVEa/es085UKZpu/M5WTFkYrFyJhhLYLXC/PGvEadCZbb5C2oQreCCjG8Osp43GMkhBMqdM3lwgBu7DOON4bxm0aAv6tb10N2v1cKH3tDJGPqV4Z8y7sTTJfoiFeKPS2Nn4pexnSatusVD4HstBmrD3J7dxGEhOrcjq7uj5+bV7zmjffzcq0dl6xgPIuhX4aAI/m0zDlbf7nkPQ5990Acut3MDoDl3Nkhf51sjaaX2kaOyvbtPg412lbNmlbgyEGY=\"],\"x5t\":\"TVecpjmA_JL72ls24mZqewwr7CU\",\"x5t#S256\":\"_9MI1BIyq6VGJ2FltV_jo1gEsxr1xrWF1VgYkxQPjJY\"}]}",
+                "callback": {
+                  "scheme": "https",
+                  "hostname": "192.168.99.125",
+                  "path": "/productpage/oauth/callback",
+                  "port": "443"
+                },
+                "client_id": "pkce-test",
+                "client_secret": "72e0146a-de99-4bcc-b77d-4d591bdb32eb",
+                "scopes": [],
+                "landing_page": "https://192.168.99.125:443/",
+                "cryptor_secret": "app_secret_xxx",
+                "cookie_name_prefix": "productpage",
+                "id_token": {
+                  "preamble": "Bearer",
+                  "header": "Authorization"
+                },
+                "timeout": 300,
+                "logout": {
+                  "path": "/authservice_logout",
+                  "redirect_to_uri": "https://10.108.8.182:8443/auth/realms/master/protocol/openid-connect/logout"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }

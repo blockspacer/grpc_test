@@ -255,6 +255,8 @@ RUN set -ex \
   && \
   mkdir -p /etc/ssh/ && echo ClientAliveInterval 60 >> /etc/ssh/sshd_config \
   && \
+  rm -rf /etc/apt/apt.conf.d/00proxy \
+  && \
   rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/* /build/* \
   # Create a "nobody" non-root user for the next image by crafting an /etc/passwd
   # file that the next image can copy in. This is necessary since the next image

@@ -92,7 +92,7 @@ RUN set -ex \
   && \
   mkdir -p $WDIR \
   && \
-  (cp $WDIR/.ca-certificates/* /usr/local/share/ca-certificates/ || true) \
+  (cp -r $WDIR/.ca-certificates/* /usr/local/share/ca-certificates/ || true) \
   && \
   (rm -rf $WDIR/.ca-certificates || true) \
   && \

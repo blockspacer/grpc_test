@@ -11,8 +11,24 @@ spec:
         name: http
         protocol: HTTP
 #        protocol: HTTP2
+      tls:
+        httpsRedirect: true
       hosts:
         - "*"
+#     - "httpbin.example.com"
+    - port:
+        number: 443
+        name: https
+        #protocol: GRPC-WEB
+        protocol: HTTPS
+# see https://istio.io/docs/tasks/traffic-management/ingress/secure-ingress-mount/
+      tls:
+        mode: SIMPLE
+        serverCertificate: /etc/istio/ingressgateway-certs/tls.crt
+        privateKey: /etc/istio/ingressgateway-certs/tls.key
+      hosts:
+      - "*"
+#     - "httpbin.example.com"
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
@@ -21,11 +37,15 @@ metadata:
 spec:
   hosts:
     - "*"
+#   - "httpbin.example.com"
   gateways:
     - app-gateway
+  #tcp:
+  #tls:
   http:
     - match:
 #        - port: 80
+#        - port: 443
         - uri:
 # NOTE: change to package name and service name from proto file
             prefix: /helloworld.Greeter
@@ -33,6 +53,8 @@ spec:
         - destination:
 #            host: server.default.svc.cluster.local
             host: server
+      #timeout: 3s
+      #maxGrpcTimeout: 3s
       corsPolicy:
         allowOrigin:
           - "*"
@@ -68,6 +90,8 @@ spec:
     - route:
       - destination:
           host: web-ui
+      #timeout: 10s
+      #maxGrpcTimeout: 10s
       websocketUpgrade: true
       corsPolicy:
         allowOrigin:

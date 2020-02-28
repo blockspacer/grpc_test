@@ -1,0 +1,16 @@
+apiVersion: "authentication.istio.io/v1alpha1"
+kind: "Policy"
+metadata:
+  name: "frontend-jwt"
+spec:
+  targets:
+  - name: server
+  origins:
+  - jwt:
+      issuer: "testing@secure.istio.io"
+      jwksUri: "https://raw.githubusercontent.com/istio/istio/release-1.2/security/tools/jwt/samples/jwks.json"
+      trigger_rules:
+      - excluded_paths:
+        - exact: /_healthz
+        - exact: /
+  principalBinding: USE_ORIGIN
