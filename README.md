@@ -31,11 +31,28 @@ Add istioctl to PATH https://gist.github.com/blockspacer/0237dcdea981f78f8c3ea80
 
 Enable `registry` addon for `minikube` as in https://minikube.sigs.k8s.io/docs/tasks/docker_registry/
 
+Generate TLS certs and apply as kubectl secret, see below
+
+```bash
+kubectl exec -it -n istio-system $(kubectl -n istio-system get pods -l istio=ingressgateway -o jsonpath='{.items[0].metadata.name}') -- ls -al /etc/istio/ingressgateway-certs
+```
+
+Must print
+
+```bash
+# ...
+lrwxrwxrwx 1 root root   14 Feb 28 10:30 tls.crt -> ..data/tls.crt
+lrwxrwxrwx 1 root root   14 Feb 28 10:30 tls.key -> ..data/tls.key
+# ...
+```
+
 Tested with `GRPC_RELEASE_TAG=v1.26.x`
 
 We can now simply deploy the above configurations in the following order.
 
 Note that once we deploy this service over Istio, the grpc- prefix in the Service port name will allow Istio to recognize this as a gRPC service.
+
+Build and push deps to local conan package registry as in `cat scripts/clean_start.sh`
 
 ```bash
 minikube stop
@@ -62,7 +79,7 @@ kubectl -n kube-system get svc registry -o jsonpath='{.spec.clusterIP}'
 # see http://rastko.tech/kubernetes/2019/01/01/minikube-on-mac.html
 # see http://rastko.tech/kubernetes/2019/01/01/minikube-on-mac.html
 
-Now the kubernetes part. Copy the clusterIP of the registry service running on kube-system namespace and put it on the pod spec's image as in https://amritbera.com/journal/minikube-insecure-registry.html:
+(OPTIONAL) Now the kubernetes part. Copy the clusterIP of the registry service running on kube-system namespace and put it on the pod spec's image as in https://amritbera.com/journal/minikube-insecure-registry.html:
 
 ```yaml
 ...
@@ -78,11 +95,17 @@ spec:
 ...
 ```
 
-Add result of `echo $(minikube ip)` into `NO_PROXY` in `/etc/systemd/system/docker.service.d/http-proxy.conf` or `~/.docker/config.json`
+(OPTIONAL) Add result of `echo $(minikube ip)` into `NO_PROXY` in `/etc/systemd/system/docker.service.d/http-proxy.conf` or `~/.docker/config.json`
+
+Use minikube context:
 
 ```bash
 kubectl config use-context minikube
+```
 
+(OPTIONAL) configure dns in minikube
+
+```bash
 minikube ssh -- sudo mkdir -p /etc/docker
 minikube ssh -- sudo touch /etc/docker/daemon.json
 # NOTE: can't set "insecure-registries" due to `--insecure-registry` minikube arg
@@ -102,21 +125,32 @@ EOF
 minikube ssh -- sudo cat /etc/docker/daemon.json
 minikube ssh -- sudo systemctl daemon-reload
 minikube ssh -- sudo systemctl restart docker
+```
+
+(OPTIONAL) use minikube tunnel feature
+
+```bash
 # Run this command in a different terminal, because the minikube tunnel feature will block your terminal to output diagnostic information about the network:
 minikube tunnel
 # Sometimes minikube does not clean up the tunnel network properly. To force a proper cleanup:
 minikube tunnel --cleanup
+```
 
+Apply istio manifest:
+
+```bash
+# (OPTIONAL) delete old istio instance
 # https://github.com/istio/istio/issues/6085#issuecomment-493015039
 (kubectl delete meshpolicy default || true)
 (kubectl delete ns istio-system || true)
 
+# create new istio instance
 istioctl manifest apply --skip-confirmation
 # OR
 # istioctl manifest apply --set values.global.mtls.enabled=true,values.security.selfSigned=false --set values.global.controlPlaneSecurityEnabled=true
 
 # Enable automatic sidecar injection for defaultnamespace
-kubectl label namespace default istio-injection=enabled
+(kubectl label namespace default istio-injection=enabled || true)
 ```
 
 ## Build docker images
@@ -130,7 +164,8 @@ kubectl label namespace default istio-injection=enabled
 # sudo -E docker tag gaeus:authservice $(minikube ip):5000/gaeus:authservice
 # cd -
 
-# NOTE: create GITHUB_TOKEN with `read:packages` scope https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line
+# NOTE: create GITHUB_TOKEN with `read:packages` scope as in https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line
+# NOTE: GITHUB_TOKEN from https://github.com/settings/tokens
 sudo -E docker login -u USER_NAME -p GITHUB_TOKEN docker.pkg.github.com
 export AUTHSERVICE_IMAGE=docker.pkg.github.com/istio-ecosystem/authservice/authservice:0.1.0-243af67fc9eb
 sudo -E docker pull $AUTHSERVICE_IMAGE --disable-content-trust
@@ -234,35 +269,33 @@ http_proxy= no_proxy="$(minikube ip),localhost" \
 ```bash
 cd istio
 
-# NOTE: you can just run `bash deploy.sh`
-
 # Tag your images with $(minikube ip):5000/image-name and push them.
 # Inside k8s your images will be available from localhost:5000 registry, so your k8s manifests should specify image as `localhost:5000/image-name`.
 export REGISTRY_IP=localhost # Requires pushing of images to registry
 #export REGISTRY_IP=$(minikube ip) # Requires `eval $(minikube docker-env)`
 export REGISTRY_PORT=5000
-cat web-ui.yaml | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" | kubectl apply -f -
-# NOTE: waits by pod label, see -lapp=...
-kubectl wait pod -lapp=web-ui --for=condition=Ready --timeout=30s -n default
-kubectl get pods | grep -m2 "web-ui-"
-kubectl get svc web-ui
-# check `minikube service ...... --url` via curl
-http_proxy= no_proxy="$(minikube ip),$(minikube service web-ui --url),localhost" \
-  curl -vk $(minikube service web-ui --url)
-cat filter.yaml | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" | kubectl apply -f -
-cat authservice-configmap-template-for-authn.yaml | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" | kubectl apply -f -
-cat server.yaml | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" | kubectl apply -f <(istioctl kube-inject -f -)
-# NOTE: waits by pod label, see -lapp=...
-kubectl wait pod -lapp=server --for=condition=Ready --timeout=30s -n default
-http_proxy= no_proxy="$(minikube ip),$(minikube service server --url),localhost" \
-  curl -vk $(minikube service server --url)
-cat gateway.yaml | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" | kubectl apply -f -
 
 # use $INGRESS_HOST:$INGRESS_PORT from https://istio.io/docs/tasks/traffic-management/ingress/ingress-control/
 export INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="http2")].nodePort}')
 export SECURE_INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="https")].nodePort}')
 export INGRESS_HOST=$(minikube ip)
 echo "INGRESS_HOST=$INGRESS_HOST INGRESS_PORT=$INGRESS_PORT SECURE_INGRESS_PORT=$SECURE_INGRESS_PORT"
+
+bash deploy.sh
+
+# NOTE: waits by pod label, see -lapp=...
+kubectl wait pod -lapp=web-ui --for=condition=Ready --timeout=30s -n default
+kubectl get pods | grep -m2 "web-ui-"
+kubectl get svc web-ui
+
+# check `minikube service ...... --url` via curl
+http_proxy= no_proxy="$(minikube ip),$(minikube service web-ui --url),localhost" \
+  curl -vk $(minikube service web-ui --url)
+
+# NOTE: waits by pod label, see -lapp=...
+kubectl wait pod -lapp=server --for=condition=Ready --timeout=30s -n default
+http_proxy= no_proxy="$(minikube ip),$(minikube service server --url),localhost" \
+  curl -vk $(minikube service server --url)
 
 kubectl get pods | grep -m2 "server-"
 kubectl get svc server
@@ -446,7 +479,7 @@ Delete old app
 ```bash
 cd -
 
-# NOTE: you can just run `bash clean.sh`
+bash clean.sh
 
 kubectl get all -n default
 kubectl get ingress -n default
@@ -454,35 +487,9 @@ kubectl get gateway -n default
 kubectl get destinationrules -n default
 kubectl get virtualservices -n default
 kubectl get pod -n default
-#kubectl delete gateway --ignore-not-found=true app-gateway
-#kubectl delete virtualservices --ignore-not-found=true virtual-service
-cat gateway.yaml \
-  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
-  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
-  | kubectl delete --ignore-not-found=true -f -
-cat server.yaml \
-  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
-  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
-  | kubectl delete --ignore-not-found=true -f -
-cat web-ui.yaml \
-  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
-  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
-  | kubectl delete --ignore-not-found=true -f -
-cat filter.yaml \
-  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
-  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
-  | kubectl delete --ignore-not-found=true -f -
-cat authservice-configmap-template-for-authn.yaml \
-  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
-  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
-  | kubectl delete --ignore-not-found=true -f -
-kubectl delete destinationrules --all -n default
-kubectl delete gateway --all -n default
-kubectl delete virtualservices --all -n default
-kubectl delete pod --all -n default
+
 # CAUTION!
 # kubectl delete namespaces default --grace-period=5 --force
-# ... Re-deploy app ... AS ABOVE ...
 ```
 
 Crete new certs
@@ -503,8 +510,10 @@ kubectl exec -it -n istio-system $(kubectl -n istio-system get pods -l istio=ing
 Must print
 
 ```bash
+# ...
 lrwxrwxrwx 1 root root   14 Feb 28 10:30 tls.crt -> ..data/tls.crt
 lrwxrwxrwx 1 root root   14 Feb 28 10:30 tls.key -> ..data/tls.key
+# ...
 ```
 
 ```bash

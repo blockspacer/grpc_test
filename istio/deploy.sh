@@ -23,12 +23,12 @@ cat web-ui.yaml \
 # NOTE: waits by pod label, see -lapp=...
 kubectl wait pod -lapp=web-ui --for=condition=Ready --timeout=30s -n default
 
-cat app-external-authz-envoyfilter-sidecar.yaml  \
-  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
-  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
-  | sed "s/{{INGRESS_HOST}}/$INGRESS_HOST/g" \
-  | sed "s/{{INGRESS_PORT}}/$SECURE_INGRESS_PORT/g" \
-  | kubectl apply -f -
+#cat app-external-authz-envoyfilter-sidecar.yaml  \
+#  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
+#  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
+#  | sed "s/{{INGRESS_HOST}}/$INGRESS_HOST/g" \
+#  | sed "s/{{INGRESS_PORT}}/$SECURE_INGRESS_PORT/g" \
+#  | kubectl apply -f -
 
 cat filter.yaml  \
   | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
@@ -37,12 +37,12 @@ cat filter.yaml  \
   | sed "s/{{INGRESS_PORT}}/$SECURE_INGRESS_PORT/g" \
   | kubectl apply -f -
 
-cat auth.yaml \
-  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
-  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
-  | sed "s/{{INGRESS_HOST}}/$INGRESS_HOST/g" \
-  | sed "s/{{INGRESS_PORT}}/$SECURE_INGRESS_PORT/g" \
-  | kubectl apply -f -
+#cat auth.yaml \
+#  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
+#  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
+#  | sed "s/{{INGRESS_HOST}}/$INGRESS_HOST/g" \
+#  | sed "s/{{INGRESS_PORT}}/$SECURE_INGRESS_PORT/g" \
+#  | kubectl apply -f -
 
 cat server.yaml \
   | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
@@ -56,3 +56,5 @@ cat gateway.yaml \
   | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
   | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
   | kubectl apply -f -
+
+echo "open in browser https://$INGRESS_HOST:$SECURE_INGRESS_PORT/"

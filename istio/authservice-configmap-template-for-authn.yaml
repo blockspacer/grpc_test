@@ -36,17 +36,17 @@ data:
                   "path": "/auth/realms/master/protocol/openid-connect/token",
                   "port": "8443"
                 },
-                "jwks": "{\"keys\":[{\"kid\":\"sCdb0aOyizSf4Fmx1pGnn4ey-_bdSmzNcT_IGn54x68\",\"kty\":\"RSA\",\"alg\":\"RS256\",\"use\":\"sig\",\"n\":\"ywiOUuqfAsdRwOpQ8aGXv8wni1MKZytNCoiW_6EltTBbG0g1OMsQyO82Zj8j3jlVR5vSTwouMXAIAomBsrTAn-Rw2hvFsNOXoQlyJ-_c8KiSeS3sf4bEcyVa0AOpMH6GTqaZESOMf4CQo2R9O9oQ_xFWG3_qrthQUhmTEAFa-haBfyK6cWXnGqBW048XyGrqrymrrDp_xei_uq1kBGiMN1E3c_weREABkcC73VbkqgwOXdNpzkr9R3AsWWz9lqhAOORS19j9XWUEbjbstlN0qWAoqQFlGE16WgpJx8S36AzXdux-qWXkblD0OiBwS7pPHtSQhNPfEvyQ7fV_fqWovw\",\"e\":\"AQAB\",\"x5c\":[\"MIICmzCCAYMCBgFwjCxR6jANBgkqhkiG9w0BAQsFADARMQ8wDQYDVQQDDAZtYXN0ZXIwHhcNMjAwMjI4MTQxOTM5WhcNMzAwMjI4MTQyMTE5WjARMQ8wDQYDVQQDDAZtYXN0ZXIwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDLCI5S6p8Cx1HA6lDxoZe/zCeLUwpnK00KiJb/oSW1MFsbSDU4yxDI7zZmPyPeOVVHm9JPCi4xcAgCiYGytMCf5HDaG8Ww05ehCXIn79zwqJJ5Lex/hsRzJVrQA6kwfoZOppkRI4x/gJCjZH072hD/EVYbf+qu2FBSGZMQAVr6FoF/IrpxZecaoFbTjxfIauqvKausOn/F6L+6rWQEaIw3UTdz/B5EQAGRwLvdVuSqDA5d02nOSv1HcCxZbP2WqEA45FLX2P1dZQRuNuy2U3SpYCipAWUYTXpaCknHxLfoDNd27H6pZeRuUPQ6IHBLuk8e1JCE098S/JDt9X9+pai/AgMBAAEwDQYJKoZIhvcNAQELBQADggEBADZ88AhB/JGIlhqVStm6fAWQZoOsqFqREmZB8pPNOTVykMsE8uxqOnNC8OWpP3+6w6JNTLZuJX1LgZg3PyiMPGSSjrI6m/JuadharKGxxyk3AlAJ369c0anPQhucxFHbYNDDOP3/TnW/Re0vYlGfPuaVpPzUS8YkQglVbWU/C2Ja5hvxiewIAi94TQBdFIE48PQTC+qVg2T+thCYV+QSRU9Fm6vKtQgQySSut6LsR82kS91KK57dmkqDSobp3Ir2U0hfLfzlIZ9XwPmLyK9KLVYwPkMi4pFdM2++18z1UTaSOVrXJeggymtZB8dzl70QA236mU1fgAYEg7g7b6PNPbc=\"],\"x5t\":\"o3_283A0nrypXG__wPY6Ker4UEY\",\"x5t#S256\":\"1bKd3G-bB-r-S8Gw11qcdkz64FhlmX2ghGGK7kkM5Ik\"}]}",
+                "jwks": "{\"keys\":[{\"kid\":\"8hdOQpGve5Uyg-6lLeL7p8iAbf5wUBpcGSeZ8DBnMlw\",\"kty\":\"RSA\",\"alg\":\"RS256\",\"use\":\"sig\",\"n\":\"rJDzb-ItxvXHqr3d8A3oCqv5Ec5jb6JirMw8eKxak_bDlU5Pq44ynIKMnJO-EoeqsrMZshUuIwYoCzrhth7ARU_yQKf9UZGhh-cjLIOam3-LOe6h0MciS32x-Vki0iU4QCcibhX3E-epcoNGXzqdQ77YNh3xTwQfRrHPvuAkmHVGx1JDqlK8Grx24n9rWtr3HKY_PoYBEFWjET-7bPs2XCENHzI_2GE9msrO7MOjUIZoWlKPntW38ovkVEgvz1kAxs3VkJRXbIpls3wVMZXF9KMHo90TO8-Gl21hDlQn02_Te9xt8hERcRytFXFfsMmkvvd5DS-soZSwUZUFLDJD_w\",\"e\":\"AQAB\",\"x5c\":[\"MIICmzCCAYMCBgFwlbVH8TANBgkqhkiG9w0BAQsFADARMQ8wDQYDVQQDDAZtYXN0ZXIwHhcNMjAwMzAxMTA0NTUwWhcNMzAwMzAxMTA0NzMwWjARMQ8wDQYDVQQDDAZtYXN0ZXIwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCskPNv4i3G9ceqvd3wDegKq/kRzmNvomKszDx4rFqT9sOVTk+rjjKcgoyck74Sh6qysxmyFS4jBigLOuG2HsBFT/JAp/1RkaGH5yMsg5qbf4s57qHQxyJLfbH5WSLSJThAJyJuFfcT56lyg0ZfOp1Dvtg2HfFPBB9Gsc++4CSYdUbHUkOqUrwavHbif2ta2vccpj8+hgEQVaMRP7ts+zZcIQ0fMj/YYT2ays7sw6NQhmhaUo+e1bfyi+RUSC/PWQDGzdWQlFdsimWzfBUxlcX0owej3RM7z4aXbWEOVCfTb9N73G3yERFxHK0VcV+wyaS+93kNL6yhlLBRlQUsMkP/AgMBAAEwDQYJKoZIhvcNAQELBQADggEBAHNabEthcvd4IALc6DsmEhtbnPF7ik+7WiCj0v0PhUyGB4Odd1gROg593ZxTf8uHdWaS4ua9k4wmLCCoymTsLO4G6F0xiQU4gxKAJVPrjnwB3SYYcssdEloccW63Ndh66wSCWbSO29L34uM8DUT8j44TIEHOzLFHEW2KLucpxsTxTPU3mBrJWk0uNqZX1AgLb7jHh+H8diBT1tDN9CSbfskMbjI6B7kfejDlBwJNX+sKkWeKfjT9/7wfLg5rYUFXWeVFM4sVMRvGKN2labBaTQocqawBhzm7UBb1Sp3CpkXY3wE0Aw/tl0zv3zqrN/aI3Yy9Xn8cBl/7PInuDlGusxg=\"],\"x5t\":\"TaWdD43wEft07QAHr5WwDDYNRJ4\",\"x5t#S256\":\"vb2Ixb4M0btg6a7QbvV_YQZpHcLPDVfcML-RxqUjIfQ\"}]}",
                 "callback": {
                   "scheme": "https",
-                  "hostname": "{{INGRESS_HOST}}",
+                  "hostname": "192.168.99.100",
                   "path": "/productpage/oauth/callback",
-                  "port": "{{INGRESS_PORT}}"
+                  "port": "31404"
                 },
                 "client_id": "pkce-test",
                 "client_secret": "72e0146a-de99-4bcc-b77d-4d591bdb32eb",
                 "scopes": ["openid", "profile", "User"],
-                "landing_page": "https://{{INGRESS_HOST}}:{{INGRESS_PORT}}/",
+                "landing_page": "https://192.168.99.100:31404/",
                 "cryptor_secret": "app_secret_xxx",
                 "cookie_name_prefix": "productpage",
                 "id_token": {

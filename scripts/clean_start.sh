@@ -101,7 +101,7 @@ kubectl get svc -n istio-system
 # ensure corresponding Kubernetes pods are deployed and have a STATUS of Running
 kubectl get pods -n istio-system
 
-kubectl label namespace default istio-injection=enabled
+(kubectl label namespace default istio-injection=enabled || true)
 
 # To install Agones, a service account needs permission to create some special RBAC resource types.
 kubectl create clusterrolebinding cluster-admin-binding \
