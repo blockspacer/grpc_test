@@ -58,7 +58,7 @@ Build and push deps to local conan package registry as in `cat scripts/clean_sta
 minikube stop
 # OR minikube delete
 # Use `--insecure-registry='192.168.39.0/24'`, see https://minikube.sigs.k8s.io/docs/tasks/docker_registry/
-minikube start --alsologtostderr --kubernetes-version v1.12.10 --memory=14288 --cpus=2 --disk-size 25GB --vm-driver virtualbox \
+minikube start --alsologtostderr --kubernetes-version v1.13.0 --memory=14288 --cpus=4 --disk-size 30GB --vm-driver virtualbox \
   --extra-config='apiserver.enable-admission-plugins=LimitRanger,NamespaceExists,NamespaceLifecycle,ResourceQuota,ServiceAccount,DefaultStorageClass,MutatingAdmissionWebhook' \
   --extra-config=apiserver.authorization-mode=RBAC \
   --insecure-registry='localhost' \
@@ -141,8 +141,10 @@ Apply istio manifest:
 ```bash
 # (OPTIONAL) delete old istio instance
 # https://github.com/istio/istio/issues/6085#issuecomment-493015039
-(kubectl delete meshpolicy default || true)
+#(kubectl delete meshpolicy default || true)
 (kubectl delete ns istio-system || true)
+
+istioctl verify-install
 
 # create new istio instance
 istioctl manifest apply --skip-confirmation
@@ -152,6 +154,8 @@ istioctl manifest apply --skip-confirmation
 # Enable automatic sidecar injection for defaultnamespace
 (kubectl label namespace default istio-injection=enabled || true)
 ```
+
+Apply TLS Certs to istio namespace, see below
 
 ## Build docker images
 
@@ -247,7 +251,10 @@ sudo systemctl restart docker
 
 ```bash
 sudo -E docker push $(minikube ip):5000/gaeus:server
+
 sudo -E docker push $(minikube ip):5000/gaeus:web-ui
+
+sudo -E docker push $(minikube ip):5000/gaeus:authservice
 
 # cxx_build_env is OPTIONAL
 # sudo -E docker push $(minikube ip):5000/gaeus:cxx_build_env
@@ -263,6 +270,82 @@ http_proxy= no_proxy="$(minikube ip),localhost" \
 http_proxy= no_proxy="$(minikube ip),localhost" \
   curl -vk http://$(minikube ip):5000/v2/gaeus/tags/list
 ```
+
+## Keycloak
+
+TODO!!!!
+deploy keycloak
+see https://gist.github.com/blockspacer/211a932cb0a535a1b098ec0ac562eeb8#gistcomment-3147793
+
+## TLS Certs
+
+Delete old app
+
+```bash
+cd -
+
+bash clean.sh
+
+kubectl get all -n default
+kubectl get ingress -n default
+kubectl get gateway -n default
+kubectl get destinationrules -n default
+kubectl get virtualservices -n default
+kubectl get pod -n default
+
+# CAUTION!
+# kubectl delete namespaces default --grace-period=5 --force
+```
+
+Crete new certs
+
+```bash
+cd tools/gen_cert
+sh ./dockerized_gen_cert.sh
+sudo chown $USER *.key *.csr *.crt
+chmod 400 *.key
+file httpbin.example.com.key
+file httpbin.example.com.crt
+# see https://istio.io/docs/tasks/traffic-management/ingress/secure-ingress-mount/
+# The secret must be named istio-ingressgateway-certs in the istio-system namespace to align with the configuration of the Istio default ingress gateway used in this task.
+kubectl delete --ignore-not-found=true -n istio-system secret istio-ingressgateway-certs istio-ingressgateway-ca-certs
+sleep 5 # wait
+kubectl create -n istio-system secret tls istio-ingressgateway-certs --key httpbin.example.com.key --cert httpbin.example.com.crt
+sleep 5 # wait
+# Verify that tls.crt and tls.key have been mounted in the ingress gateway pod:
+kubectl exec -it -n istio-system $(kubectl -n istio-system get pods -l istio=ingressgateway -o jsonpath='{.items[0].metadata.name}') -- ls -al /etc/istio/ingressgateway-certs
+```
+
+Must print
+
+```bash
+# ...
+lrwxrwxrwx 1 root root   14 Feb 28 10:30 tls.crt -> ..data/tls.crt
+lrwxrwxrwx 1 root root   14 Feb 28 10:30 tls.key -> ..data/tls.key
+# ...
+```
+
+```bash
+# ... Re-deploy app ... AS ABOVE ...
+bash deploy.sh
+```
+
+```bash
+# CHECK
+kubectl get componentstatuses
+```
+
+It might take time for the gateway definition to propagate so you might get the following error: `Failed to connect to httpbin.example.com port <your secure port>: Connection refused.` Wait for a minute and then retry the curl call.
+
+```bash
+cd tools/gen_cert
+echo "INGRESS_HOST=$INGRESS_HOST INGRESS_PORT=$INGRESS_PORT SECURE_INGRESS_PORT=$SECURE_INGRESS_PORT"
+curl -v -HHost:httpbin.example.com --resolve httpbin.example.com:$SECURE_INGRESS_PORT:$INGRESS_HOST --cacert httpbin.example.com.crt https://$INGRESS_HOST:$SECURE_INGRESS_PORT/status/418
+# Validate `Server certificate:` in output
+cd -
+```
+
+Don't forget to add it to Chromium browser `Chromium -> Setting -> (Advanced) Manage Certificates -> Import -> 'server_rootCA.pem'`
 
 ## Upload yaml files
 
@@ -466,74 +549,12 @@ Install grpc (requres protobuf) https://github.com/grpc/grpc/blob/master/BUILDIN
 
 see `chrome://flags/#allow-insecure-localhost`
 
-## Keycloak
+## TODO
 
-TODO!!!!
-deploy keycloak
-see https://gist.github.com/blockspacer/211a932cb0a535a1b098ec0ac562eeb8#gistcomment-3147793
-
-## TLS Certs
-
-Delete old app
+Configure Istio to allow only registered traffic:
 
 ```bash
-cd -
-
-bash clean.sh
-
-kubectl get all -n default
-kubectl get ingress -n default
-kubectl get gateway -n default
-kubectl get destinationrules -n default
-kubectl get virtualservices -n default
-kubectl get pod -n default
-
-# CAUTION!
-# kubectl delete namespaces default --grace-period=5 --force
+kubectl get configmap istio -n istio-system -o yaml | sed 's/mode: ALLOW_ANY/mode: REGISTRY_ONLY/g' | kubectl replace -n istio-system -f -
 ```
 
-Crete new certs
-
-```bash
-cd tools/gen_cert
-sh ./dockerized_gen_cert.sh
-sudo chown $USER *.key *.csr *.crt
-chmod 400 *.key
-# see https://istio.io/docs/tasks/traffic-management/ingress/secure-ingress-mount/
-# The secret must be named istio-ingressgateway-certs in the istio-system namespace to align with the configuration of the Istio default ingress gateway used in this task.
-kubectl delete --ignore-not-found=true -n istio-system secret istio-ingressgateway-certs istio-ingressgateway-ca-certs
-kubectl create -n istio-system secret tls istio-ingressgateway-certs --key httpbin.example.com.key --cert httpbin.example.com.crt
-# Verify that tls.crt and tls.key have been mounted in the ingress gateway pod:
-kubectl exec -it -n istio-system $(kubectl -n istio-system get pods -l istio=ingressgateway -o jsonpath='{.items[0].metadata.name}') -- ls -al /etc/istio/ingressgateway-certs
-```
-
-Must print
-
-```bash
-# ...
-lrwxrwxrwx 1 root root   14 Feb 28 10:30 tls.crt -> ..data/tls.crt
-lrwxrwxrwx 1 root root   14 Feb 28 10:30 tls.key -> ..data/tls.key
-# ...
-```
-
-```bash
-# ... Re-deploy app ... AS ABOVE ...
-bash deploy.sh
-```
-
-```bash
-# CHECK
-kubectl get componentstatuses
-```
-
-It might take time for the gateway definition to propagate so you might get the following error: `Failed to connect to httpbin.example.com port <your secure port>: Connection refused.` Wait for a minute and then retry the curl call.
-
-```bash
-cd tools/gen_cert
-echo "INGRESS_HOST=$INGRESS_HOST INGRESS_PORT=$INGRESS_PORT SECURE_INGRESS_PORT=$SECURE_INGRESS_PORT"
-curl -v -HHost:httpbin.example.com --resolve httpbin.example.com:$SECURE_INGRESS_PORT:$INGRESS_HOST --cacert httpbin.example.com.crt https://$INGRESS_HOST:$SECURE_INGRESS_PORT/status/418
-# Validate `Server certificate:` in output
-cd -
-```
-
-Don't forget to add it to Chromium browser `Chromium -> Setting -> (Advanced) Manage Certificates -> Import -> 'server_rootCA.pem'`
+Create serviceentry

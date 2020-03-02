@@ -7,6 +7,7 @@ ARG NPM="npm"
 ARG NPX="npx"
 ARG NODE="node"
 ARG NODE_GYP="node-gyp"
+# NOTE: prefer --quiet --no-progress
 ARG NPM_INSTALL="npm install --loglevel verbose"
 ARG NPM_INSTALL_UNSAFE="npm install --unsafe-perm binding --loglevel verbose"
 #ARG PROTOC="protoc"
@@ -23,10 +24,13 @@ ARG INSTALL_GRPC_FROM_CONAN="True"
 ARG CONAN_EXTRA_REPOS=""
 # Example: --build-arg CONAN_EXTRA_REPOS_USER="user -p password -r conan-local admin"
 ARG CONAN_EXTRA_REPOS_USER=""
+# If you need to install global npm dependencies, it is recommended to place those dependencies in the non-root user directory
+# see https://github.com/nodejs/docker-node/blob/master/docs/BestPractices.md#global-npm-dependencies
+ENV NPM_CONFIG_PREFIX=/home/node/.npm-global
 ENV LC_ALL=C.UTF-8 \
     LANG=en_US.UTF-8 \
     LANGUAGE=en_US:en \
-    PATH=/usr/bin/:/usr/local/bin/:/go/bin:/usr/local/go/bin:/usr/local/include/:/usr/local/lib/:/usr/lib/clang/6.0/include:/usr/lib/llvm-6.0/include/:$PATH \
+    PATH=/home/node/.npm-global/bin:/usr/bin/:/usr/local/bin/:/go/bin:/usr/local/go/bin:/usr/local/include/:/usr/local/lib/:/usr/lib/clang/6.0/include:/usr/lib/llvm-6.0/include/:$PATH \
     LD_LIBRARY_PATH=/usr/local/lib/:$LD_LIBRARY_PATH \
     ROOT_DIR=/web-ui-copy \
     PROJ_DIR=/web-ui-copy/web-ui \
@@ -178,6 +182,11 @@ RUN set -ex \
   && \
   $NPM -v \
   && \
+  # see https://stackoverflow.com/a/45505787/10904212
+  $NPM -g config set user root \
+  && \
+  mkdir -p /home/node/.npm-global \
+  && \
   $NPX -v \
   && \
   # NOTE: run `npm config` in project directory
@@ -206,7 +215,7 @@ RUN set -ex \
   if [ ! -z "$http_proxy" ]; then \
     echo 'WARNING: NODE_TLS_REJECT_UNAUTHORIZED CHANGED! SEE http_proxy IN DOCKERFILE' \
     && \
-    NODE_TLS_REJECT_UNAUTHORIZED=0 HTTP_PROXY=$http_proxy HTTPS_PROXY=$https_proxy $NPM_INSTALL_UNSAFE -g --save-dev --save node-gyp webpack webpack-cli --unsafe-perm binding --loglevel verbose \
+    NODE_TLS_REJECT_UNAUTHORIZED=0 HTTP_PROXY=$http_proxy HTTPS_PROXY=$https_proxy $NPM_INSTALL_UNSAFE --save-dev --save node-gyp webpack webpack-cli --unsafe-perm binding --loglevel verbose \
     && \
     # NOTE: run `node-gyp configure` in project directory
     # Note: node-gyp configure can give an error gyp: binding.gyp not found, but it's ok.
@@ -227,7 +236,7 @@ RUN set -ex \
     NODE_TLS_REJECT_UNAUTHORIZED=0 HTTP_PROXY=$http_proxy HTTPS_PROXY=$https_proxy $NPM_INSTALL_UNSAFE \
     ; \
   else \
-    $NPM_INSTALL_UNSAFE -g --save-dev --save node-gyp webpack webpack-cli \
+    $NPM_INSTALL_UNSAFE --save-dev --save node-gyp webpack webpack-cli \
     && \
     # NOTE: run `node-gyp configure` in project directory
     # Note: node-gyp configure can give an error gyp: binding.gyp not found, but it's ok.

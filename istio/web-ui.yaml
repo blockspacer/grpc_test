@@ -31,6 +31,10 @@ spec:
         - name: app-authservice-configmap-volume # declare the volume containing the authservice ConfigMap
           configMap:
             name: app-authservice-configmap
+      hostAliases:
+      - ip: "10.0.2.2"
+        hostnames:
+        - "keycloak.example.com"
       containers:
       - name: web-ui
         # NOTE: replace registry `ip:port` with server address

@@ -13,9 +13,11 @@ spec:
 # NOTE: filters by port name, prefix your port with grpc-web-
       portNamePrefix: grpc-web
     insertPosition:
-      index: AFTER
+      index: FIRST
+#      index: LAST
+#      index: AFTER
 #      relativeTo: envoy.filters.http.jwt_authn
-      relativeTo: envoy.http_connection_manager
+#      relativeTo: envoy.http_connection_manager
     #insertPosition:
     #  index: FIRST
     filterType: HTTP
