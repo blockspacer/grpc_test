@@ -4,45 +4,60 @@ export REGISTRY_IP=localhost # Requires pushing of images to registry
 #export REGISTRY_IP=$(minikube ip) # Requires `eval $(minikube docker-env)`
 export REGISTRY_PORT=5000
 
-cat gateway.yaml \
-  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
-  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
-  | kubectl delete --ignore-not-found=true -f -
+export app_name=myapp
 
-cat server.yaml \
-  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
-  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
-  | kubectl delete --ignore-not-found=true -f -
+pushd ../k8s
 
-cat web-ui.yaml \
-  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
-  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
-  | kubectl delete --ignore-not-found=true -f -
+helm ls --all
 
-cat app-external-authz-envoyfilter-sidecar.yaml \
-  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
-  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
-  | kubectl delete --ignore-not-found=true -f -
+if helm history --max 1 $app_name 2>/dev/null; then
+    echo "helm delete for $app_name..."
+    helm delete --purge "$app_name"
+fi
 
-cat filter.yaml \
-  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
-  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
-  | kubectl delete --ignore-not-found=true -f -
+popd
 
-cat auth.yaml \
-  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
-  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
-  | kubectl delete --ignore-not-found=true -f -
+#cat gateway.yaml \
+#  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
+#  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
+#  | kubectl delete --ignore-not-found=true -f -
+#
+#cat server.yaml \
+#  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
+#  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
+#  | kubectl delete --ignore-not-found=true -f -
+#
+#cat web-ui.yaml \
+#  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
+#  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
+#  | kubectl delete --ignore-not-found=true -f -
+#
+#cat app-external-authz-envoyfilter-sidecar.yaml \
+#  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
+#  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
+#  | kubectl delete --ignore-not-found=true -f -
+#
+#cat filter.yaml \
+#  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
+#  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
+#  | kubectl delete --ignore-not-found=true -f -
+#
+#cat auth.yaml \
+#  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
+#  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
+#  | kubectl delete --ignore-not-found=true -f -
+#
+#cat authservice-configmap-template-for-authn.yaml \
+#  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
+#  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
+#  | kubectl delete --ignore-not-found=true -f -
 
-cat authservice-configmap-template-for-authn.yaml \
-  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
-  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
-  | kubectl delete --ignore-not-found=true -f -
-
-kubectl delete destinationrules --all -n default
-
-kubectl delete gateway --all -n default
-
-kubectl delete virtualservices --all -n default
-
-kubectl delete pod --all -n default
+#kubectl delete destinationrules --all -n default
+#
+#kubectl delete gateway --all -n default
+#
+#kubectl delete virtualservices --all -n default
+#
+#kubectl delete pod --all -n default
+#kubectl delete pod -lapp=server -n default
+#kubectl delete pod -lapp=web-ui -n default

@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: server
+  labels:
+    app: server
+#    run: server
+spec:
+  type: NodePort
+  #type: ClusterIP
+  ports:
+    # Note that once we deploy this service over Istio, the grpc-web prefix in the Service port name will allow Istio to recognize this as a gRPC service. https://github.com/istio/istio/pull/10064
+  - name: grpc-web-port
+    # see containerPort below
+    port: 50051
+    #nodePort: null
+    protocol: TCP
+    #protocol: GRPC-WEB
+    targetPort: 50051
+#    nodePort: 32291
+  selector:
+    app: server
+#  type: LoadBalancer
+#    ports:
+#    - name: ambassador
+#      port: 80
+#      targetPort: 80
+#    selector:
+#      service: ambassador
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: server
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: server
+        version: v1
+    spec:
+      volumes:
+        - name: app-authservice-configmap-volume # declare the volume containing the authservice ConfigMap
+          configMap:
+            name: app-authservice-configmap
+      containers:
+      - name: server
+        # NOTE: replace registry `ip:port` with server address
+        image: {{ .Values.REGISTRY_IP }}:{{ .Values.REGISTRY_PORT }}/gaeus:server
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 50051
+          name: grpc-web-port
+          protocol: TCP
+#      - name: authservice # authservice needs to be deployed in the sample Pod as the productpage
+#        image: {{ .Values.REGISTRY_IP }}:{{ .Values.REGISTRY_PORT }}/gaeus:authservice # Manually docker pull the latest authservice image from https://#github.com/istio-ecosystem/authservice/packages and push it to your own image registry (e.g. Docker Hub), and use it here. (The #Github Package Registry does not work with k8s yet until this issue is fixed and released: https://github.com/kubernetes-sigs/kind/#issues/870)
+#        imagePullPolicy: Always
+#        ports:
+#          - containerPort: 10003
+#        volumeMounts:
+#          - name: app-authservice-configmap-volume # mount the volume containing the authservice ConfigMap
+#            mountPath: /etc/authservice

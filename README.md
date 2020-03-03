@@ -48,7 +48,7 @@ minikube start --alsologtostderr --kubernetes-version v1.12.10 --memory=14288 --
   --insecure-registry='127.0.0.1' \
   --insecure-registry "192.168.39.0/24"
 # OPTIONAL: open dashboard
-minikube addons enable dashboard && kubectl get pods --all-namespaces | grep dashboard && sleep 15 && minikube dashboard
+minikube addons enable dashboard && kubectl get pods --all-namespaces | grep dashboard && sleep 15 && minikube dashboard --url
 # see http://rastko.tech/kubernetes/2019/01/01/minikube-on-mac.html
 minikube addons enable ingress
 # It will take few mins for the registry to be enabled, you can watch the status using kubectl get pods -n kube-system -w | grep registry
@@ -111,12 +111,25 @@ minikube tunnel --cleanup
 (kubectl delete meshpolicy default || true)
 (kubectl delete ns istio-system || true)
 
-istioctl manifest apply --skip-confirmation
+bash scripts/install_istio.sh
 # OR
 # istioctl manifest apply --set values.global.mtls.enabled=true,values.security.selfSigned=false --set values.global.controlPlaneSecurityEnabled=true
 
 # Enable automatic sidecar injection for defaultnamespace
 kubectl label namespace default istio-injection=enabled
+```
+
+> if you want to exclude a specific pod from getting istio sidecar injected, add this to `Deployment` kind
+
+```yaml
+metadata:
+  annotations:
+  sidecar.istio.io/inject: "false"
+```
+
+```bash
+# Install Tiller (the Helm server-side component) into the Kubernetes cluster:
+bash scripts/install_tiller.sh
 ```
 
 ## Build docker images
@@ -446,7 +459,7 @@ Delete old app
 ```bash
 cd -
 
-# NOTE: you can just run `bash clean.sh`
+bash clean.sh
 
 kubectl get all -n default
 kubectl get ingress -n default
@@ -454,32 +467,7 @@ kubectl get gateway -n default
 kubectl get destinationrules -n default
 kubectl get virtualservices -n default
 kubectl get pod -n default
-#kubectl delete gateway --ignore-not-found=true app-gateway
-#kubectl delete virtualservices --ignore-not-found=true virtual-service
-cat gateway.yaml \
-  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
-  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
-  | kubectl delete --ignore-not-found=true -f -
-cat server.yaml \
-  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
-  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
-  | kubectl delete --ignore-not-found=true -f -
-cat web-ui.yaml \
-  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
-  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
-  | kubectl delete --ignore-not-found=true -f -
-cat filter.yaml \
-  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
-  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
-  | kubectl delete --ignore-not-found=true -f -
-cat authservice-configmap-template-for-authn.yaml \
-  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
-  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
-  | kubectl delete --ignore-not-found=true -f -
-kubectl delete destinationrules --all -n default
-kubectl delete gateway --all -n default
-kubectl delete virtualservices --all -n default
-kubectl delete pod --all -n default
+
 # CAUTION!
 # kubectl delete namespaces default --grace-period=5 --force
 # ... Re-deploy app ... AS ABOVE ...
