@@ -30,8 +30,16 @@ spec:
         - name: local_service
           domains: ["*"]
           routes:
-          - match: { prefix: "/helloworld.Greeter" }
-            route: { cluster: istio-cluster }
+#          - match: { prefix: "/helloworld.Greeter" }
+#            route: { cluster: istio-cluster }
+          - match:
+              prefix: "/"
+              headers:
+                - name: "Content-Type"
+                  exactMatch: "application/grpc-web-text"
+            route:
+              cluster: istio-cluster
+              max_grpc_timeout: 0s
           cors:
             allow_origin:
             - "*"

@@ -41,6 +41,8 @@ void RunServer() {
   //std::string server_address("0.0.0.0:50051");
   std::string server_address("127.0.0.1:50051");
 
+  // TODO: SslServerCredentials https://github.com/XunChangqing/grpc-authentication-sample/blob/master/event_server.cc
+
   GreeterServiceImpl service;
 
   ServerBuilder builder;

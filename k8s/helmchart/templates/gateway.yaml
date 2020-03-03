@@ -44,11 +44,14 @@ spec:
   #tls:
   http:
     - match:
+      - headers:
+          content-type:
+            exact: "application/grpc-web-text"
+        uri:
+          # NOTE: change to package name and service name from proto file
+          prefix: "/helloworld.Greeter"
 #        - port: 80
 #        - port: 443
-        - uri:
-# NOTE: change to package name and service name from proto file
-            prefix: /helloworld.Greeter
 #        - uri:
 #            # Allow the Authentication Request Callback to get routed to productpage so it can be intercepted by the authservice
 #            prefix: /productpage/oauth
@@ -85,10 +88,10 @@ spec:
         allowHeaders:
           - grpc-timeout
           - content-type
+          - origin
           - keep-alive
           - user-agent
           - cache-control
-          - content-type
           - content-transfer-encoding
           - custom-header-1
           - x-accept-content-transfer-encoding

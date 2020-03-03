@@ -4,7 +4,10 @@ const {GreeterClient} = require('./build/emoji_grpc_web_pb.js');
 // NOTE: no ending /
 // use $INGRESS_HOST:$INGRESS_PORT from https://istio.io/docs/tasks/traffic-management/ingress/ingress-control/
 // var client = new GreeterClient('http://192.168.99.124:30209');
-var client = new GreeterClient(window.location.protocol + '//' + window.location.host);
+var client = new GreeterClient(window.location.protocol + '//' + window.location.host, null, {
+  'withCredentials': true
+});
+
 var editor = document.getElementById('editor');
 
 window.insertEmojis = function() {
