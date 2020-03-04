@@ -65,7 +65,7 @@ minikube start --alsologtostderr --kubernetes-version v1.13.0 --memory=14288 --c
   --insecure-registry='127.0.0.1' \
   --insecure-registry "192.168.39.0/24"
 # OPTIONAL: open dashboard
-minikube addons enable dashboard && kubectl get pods --all-namespaces | grep dashboard && sleep 15 && minikube dashboard
+minikube addons enable dashboard && kubectl get pods --all-namespaces | grep dashboard && sleep 15 && minikube dashboard --url
 # see http://rastko.tech/kubernetes/2019/01/01/minikube-on-mac.html
 minikube addons enable ingress
 # It will take few mins for the registry to be enabled, you can watch the status using kubectl get pods -n kube-system -w | grep registry
@@ -171,8 +171,10 @@ Apply TLS Certs to istio namespace, see below
 # NOTE: create GITHUB_TOKEN with `read:packages` scope as in https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line
 # NOTE: GITHUB_TOKEN from https://github.com/settings/tokens
 sudo -E docker login -u USER_NAME -p GITHUB_TOKEN docker.pkg.github.com
+#export AUTHSERVICE_IMAGE=authservice
 export AUTHSERVICE_IMAGE=docker.pkg.github.com/istio-ecosystem/authservice/authservice:0.1.0-243af67fc9eb
 sudo -E docker pull $AUTHSERVICE_IMAGE --disable-content-trust
+# push image
 sudo -E docker tag $AUTHSERVICE_IMAGE $(minikube ip):5000/gaeus:authservice
 sudo -E docker push $(minikube ip):5000/gaeus:authservice
 
@@ -549,6 +551,8 @@ Install grpc (requres protobuf) https://github.com/grpc/grpc/blob/master/BUILDIN
 
 see `chrome://flags/#allow-insecure-localhost`
 
+see in firefox `about:preferences#privacy` and `network.websocket.allowInsecureFromHTTPS` in `about:config`
+
 ## TODO
 
 Configure Istio to allow only registered traffic:
@@ -558,3 +562,11 @@ kubectl get configmap istio -n istio-system -o yaml | sed 's/mode: ALLOW_ANY/mod
 ```
 
 Create serviceentry
+
+## TODO
+
+export CODE_FROM_REQUEST=16125935-f88d-4375-9691-dd9aafe46402.5e54c484-4335-4c8a-b22a-eb6fd3a1086f.2aa47e2c-9dde-4b95-95d4-17c59ace967c
+export CLIENT_SECRET=199c35ad-8e4b-4546-8e18-6f0d158eb364
+
+curl -X POST -H "Content-Type: application/x-www-form-urlencoded" -d "grant_type=authorization_code&client_id=pkce-test&client_secret=$CLIENT_SECRET&code=$CODE_FROM_REQUEST&redirect_uri=https://keycloak.example.com:8443/authorization-code/callback&scope=openid profile User&client_id=pkce-test&client_secret=$CLIENT_SECRET" https://keycloak.example.com:8443/auth/realms/master/protocol/openid-connect/token
+{"access_token":"eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI4aGRPUXBHdmU1VXlnLTZsTGVMN3A4aUFiZjV3VUJwY0dTZVo4REJuTWx3In0.eyJqdGkiOiJlNzczZGYxOC1kNGJhLTQ3NmYtOGQ0Ni05ZGMxMzg1MjJhMmIiLCJleHAiOjE1ODMyOTQ0MzMsIm5iZiI6MCwiaWF0IjoxNTgzMjkyNjMzLCJpc3MiOiJodHRwczovL2tleWNsb2FrLmV4YW1wbGUuY29tOjg0NDMvYXV0aC9yZWFsbXMvbWFzdGVyIiwiYXVkIjoiYWNjb3VudCIsInN1YiI6IjFhZmUyZTdhLTk5YTMtNDEwZS04MjYyLTcxZmRjMmJmMDkwNSIsInR5cCI6IkJlYXJlciIsImF6cCI6InBrY2UtdGVzdCIsImF1dGhfdGltZSI6MTU4MzI5MTU3NSwic2Vzc2lvbl9zdGF0ZSI6IjVlNTRjNDg0LTQzMzUtNGM4YS1iMjJhLWViNmZkM2ExMDg2ZiIsImFjciI6IjAiLCJhbGxvd2VkLW9yaWdpbnMiOlsiKiJdLCJyZWFsbV9hY2Nlc3MiOnsicm9sZXMiOlsib2ZmbGluZV9hY2Nlc3MiLCJ1bWFfYXV0aG9yaXphdGlvbiJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoib3BlbmlkIHByb2ZpbGUgZW1haWwiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwicHJlZmVycmVkX3VzZXJuYW1lIjoiam9obl91c2VybmFtZSJ9.faHDjdTjQsCC9Qa3Zc34CM2AQTmzsp4nHST_mNF-aOzvrxdz5X0QMoGr-HsJIsOecjBEl1_75P9rc99pT7GlHdlX1nRTW170eIujgJtvRc3dr0Ywh6Q2QzD3qUtVBY8aU-1_DniE7e3cRl1z7UJ_cYWtlPHEslTuLuZtK3bIwvUg8BMzEyhwaS-IbU9p0cJnX7OxVSU0KP0YbHeL0jnKbRg9Rhm06nwI52fZOgGDqRQnryEUKLKKjfQZQ-FYZLkCMFK0OnWE8gX0zFbGCeck9dQjAibFEnAeO41Cudkm00cLycuLFPcdg6c66m5RebjIWftkAqp1e-zi08FYk6b9pw","expires_in":1799,"refresh_expires_in":1800,"refresh_token":"eyJhbGciOiJIUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI0NTVlOTg2OS0wYTJlLTQ3NWYtOGRmYi1iMWFjNGZmMjkwNDIifQ.eyJqdGkiOiIxMDVmMmI4Ni00YmU3LTQzN2YtYmJkZS04ODFkYjMzYjQ1MWUiLCJleHAiOjE1ODMyOTQ0MzQsIm5iZiI6MCwiaWF0IjoxNTgzMjkyNjM0LCJpc3MiOiJodHRwczovL2tleWNsb2FrLmV4YW1wbGUuY29tOjg0NDMvYXV0aC9yZWFsbXMvbWFzdGVyIiwiYXVkIjoiaHR0cHM6Ly9rZXljbG9hay5leGFtcGxlLmNvbTo4NDQzL2F1dGgvcmVhbG1zL21hc3RlciIsInN1YiI6IjFhZmUyZTdhLTk5YTMtNDEwZS04MjYyLTcxZmRjMmJmMDkwNSIsInR5cCI6IlJlZnJlc2giLCJhenAiOiJwa2NlLXRlc3QiLCJhdXRoX3RpbWUiOjAsInNlc3Npb25fc3RhdGUiOiI1ZTU0YzQ4NC00MzM1LTRjOGEtYjIyYS1lYjZmZDNhMTA4NmYiLCJyZWFsbV9hY2Nlc3MiOnsicm9sZXMiOlsib2ZmbGluZV9hY2Nlc3MiLCJ1bWFfYXV0aG9yaXphdGlvbiJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoib3BlbmlkIHByb2ZpbGUgZW1haWwifQ.ZBW2Z3G2qPTijAShmspf9ZzeP4OC-RjgC4Aw5v7GZ9A","token_type":"bearer","id_token":"eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI4aGRPUXBHdmU1VXlnLTZsTGVMN3A4aUFiZjV3VUJwY0dTZVo4REJuTWx3In0.eyJqdGkiOiJmZWI5Yjk5OS1iNzM0LTQ0MjQtOTEzNS1kYTZmNDMxYTdhYTEiLCJleHAiOjE1ODMyOTQ0MzMsIm5iZiI6MCwiaWF0IjoxNTgzMjkyNjM0LCJpc3MiOiJodHRwczovL2tleWNsb2FrLmV4YW1wbGUuY29tOjg0NDMvYXV0aC9yZWFsbXMvbWFzdGVyIiwiYXVkIjoicGtjZS10ZXN0Iiwic3ViIjoiMWFmZTJlN2EtOTlhMy00MTBlLTgyNjItNzFmZGMyYmYwOTA1IiwidHlwIjoiSUQiLCJhenAiOiJwa2NlLXRlc3QiLCJhdXRoX3RpbWUiOjE1ODMyOTE1NzUsInNlc3Npb25fc3RhdGUiOiI1ZTU0YzQ4NC00MzM1LTRjOGEtYjIyYS1lYjZmZDNhMTA4NmYiLCJhY3IiOiIwIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInByZWZlcnJlZF91c2VybmFtZSI6ImpvaG5fdXNlcm5hbWUifQ.Oul2z5wdeDgylLHOmMn0uiOqHH81GRupCq1Sk8OvzrXR5RnZFuGWRlrzuLweEb27AO8gZrsn5cgblcYUgMLw5RT0KhDME4uvgYmB5iPONIQkcdxPIltc21QG2bj9LiauS4sWOR5OFInYeeGtwc4dckIQucw3FqaM6UH_W3-5URYLMN91-WNKI9RmcdVVCzLUpZPIoraWED1N_BMhiu7rXgsedcKIAPQzo3n1rmRpee1HDW7iDKyqPaV-MDZfID2sk-emr1br54ntso8yyek_jigTvsLI3NBpi9y5RAJx6gjAFUkSrFkk8n9DwOtIVFa_qHcbVK9cPcvfgaaADs4jew","not-before-policy":0,"session_state":"5e54c484-4335-4c8a-b22a-eb6fd3a1086f","scope":"openid profile email"}                                                  

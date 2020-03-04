@@ -16,7 +16,7 @@ data:
       "listen_address": "127.0.0.1",
       "listen_port": "10003",
       "log_level": "trace",
-      "threads": 8,
+      "threads": 1,
       "chains": [
         {
           "name": "idp_filter_chain",
@@ -56,8 +56,7 @@ data:
                   "redirect_to_uri": "https://keycloak.example.com:8443/auth/realms/master/protocol/openid-connect/logout"
                 },
                 "max_absolute_session_timeout": 3600,
-                "max_session_idle_timeout": 600,
-                "trusted_certificate_authority": "-----BEGIN CERTIFICATE-----\nMIIC3jCCAcYCAQAwDQYJKoZIhvcNAQELBQAwLTEVMBMGA1UECgwMZXhhbXBsZSBJ\nbmMuMRQwEgYDVQQDDAtleGFtcGxlLmNvbTAeFw0yMDAzMDExMDQ0MThaFw0yMTAz\nMDExMDQ0MThaMD0xHDAaBgNVBAMME2h0dHBiaW4uZXhhbXBsZS5jb20xHTAbBgNV\nBAoMFGh0dHBiaW4gb3JnYW5pemF0aW9uMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A\nMIIBCgKCAQEAsni0BnNSODfZdEgdgKn+Tn9GLxcEmLQGSb7DtbXfhOjs+Yu70kbH\n4dvCDoFOcjOxxWWBtvHHmaBNm5qGlYeu77xlITw3mwUexWZZbp5Hll5XKTtFYn1N\nWmZtBQG8Ikwpc26ubYyACKTIr0OYlhqG1/NA7m9ptUkKHXny5AL08T4FqOknls31\nibD0SG+bUaFkUykY6VBPKZZYrK4XIfs5Td3uPMAbImb5XxXJ4cjh0oXX0Bjq6sGG\nu1iKM0KzNHuTJ97/aO3NPSVnHXD3YWdskOQkm1Ylbl03uo+LsLyYdjYAxWLMYQ4q\nKWAs2F7Dyulv73pIsPJcXt5i/L6AxfD0YQIDAQABMA0GCSqGSIb3DQEBCwUAA4IB\nAQA9OaFtOLdz97erUrlSFmKNSkwKBbWB0woUmnp+jDg7DLcSdj42SEy8pALgAJp4\nJa2JnsmPlBnLxT1tbMh8DWc+8E9RK6G+uFlYd6Tr0CIlkY7nIxmDGxftlrIk5Hwa\n/R+PxinST2KjhA3hyBliEQ57XXmTU1txjqLl2FIUhdwFI1KZrJ7D3yq0ug1fHisz\n+18MHyTCq2ZrNRtqSxQABoU8JNTOASHzKeqAwJd8alK088MM2RPM/fzUbO+zHDbO\nHDDT1kmVSsHo9aszoigOA39ZFVXzNoYbyZl1pEOPFfGCwVaRoICdJVe6n0BLCjmk\nnjOXNXj2/YykQcrElHpQTmrr\n-----END CERTIFICATE-----\n-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCyeLQGc1I4N9l0\nSB2Aqf5Of0YvFwSYtAZJvsO1td+E6Oz5i7vSRsfh28IOgU5yM7HFZYG28ceZoE2b\noaVh67vvGUhPDebBR7FZllunkeWXlcpO0VifU1aZm0FAbwiTClzbq5tjIAIpMiv\nQ5iWGobX80Dub2m1SQodefLkAvTxPgWo6SeWzfWJsPRIb5tRoWRTKRjpUE8pllis\nrhch+zlN3e48wBsiZvlfFcnhyOHShdfQGOrqwYa7WIozQrM0e5Mn3v9o7c09JWcd\ncPdhZ2yQ5CSbViVuXTe6j4uwvJh2NgDFYsxhDiopYCzYXsPK6W/vekiw8lxe3mL8\nvoDF8PRhAgMBAAECggEAZoP4/N+PMeW6zhWChN6gylxHZ1M0e7alCgU/DAidjQ3y\n2WEPkTjBJhaCgKx78BOLoNSuzvRQ8Ajpq2D2v7vBm8m+2Xlqg2xMgZ1J78WRX2lv\nbaqzL2DEZxIAu2iEtbrD8J96KEkVXmGxOSN96XLxU+hRuuRadxyuZ8Id6CVep5c/\nlJBlcxGU8iKmLgz6dD7kMgoQtPGjgfqJnnVwz7YiaaUXKhmsDrNkt5YBZWNsA7yq\nkBtiPi0M2dD3hDDRH4/tZhxadACSByVIGJDiS96NV0s8DU7vo5P5icY9XZRyREV5\n0HHqP4l9LX4EvJREuPHy50h+SKryTfyf2d7bGNU2hQKBgQDmFSK0mfq7Xef8/FB5\ntvqPp0jeGKdrv4psEplzp9OesagI6gQ2GGzhyiw2EdtxQq/rtbUv9z04GYxiAZA/\nmUnYuE3cxwWljWzG+6MplsIBMpfKyuYddPUF9cV0v1k8bO4SNvMi7c/ccpc13A56\nhN0GU5kHrV9Zeawy0RGciCDKwwKBgQDGk0PsOLIDnRM+jADTS9p6AKQI2klk+j+H\nNxSVFGoqRr8wlqFG5oz77nfox7o8qQv59PzmRAt6W/xxtj2o7OTBT4uw70LMBrBl\nOm9ceonwC26KbuSmrYY3nmVhyEEDCq1DfJ0/NHNVthxGS1V6yuAmYroUeG4nSpVR\ne3WVmObqCwKBgQC+cWQmpQVarWHmj1p1RLWkzkyMOU/q6cJDrimCB7osMtTpe/o8\nZH9LbTKnFqTS3OYMbn0o1LbBhrQiMzUYz2LGldctFTdhTuxoz8TAGd8/aocl/kf2\nveZKJqJn/jJ4x5lPTlh14u4YhGkQ1bLOSsdAA1Y5epHf18xmy5KOREcQTQKBgEDa\nf+h6a8k6V7qpxus7btNBulEZ2bac9HqYxqQZ0sKT8IVR7MJXMdxl+cuQz4ZYP40X\nMjGSL516xWvt9R1ioSNxc1IKEmrIFHw7JXuymbJISYX0ycCWE6u+k6Xn3TO9HPFZ\nlZG686AepgVfPT+pWqOuws9EtdUnSrUd+T0uftwZAoGAXVaJ31xuZtjb9H1rosJ3\nQLitAKNonRgGWh0VZei2HUmc/ttut/XOqP6zxHx3QDhlqcj4OQSkjdujvYVkTKDj\n7jJAN6EpHkQ0u2V93PNBwCFeD0oslIel9psUUS1nvh3KrZsXkKeI8c256Qh4k3r1\nHcxNfvwUTBK9ufeBGCJK6C4=\n-----END PRIVATE KEY-----\n"
+                "max_session_idle_timeout": 600
               }
             }
           ]
