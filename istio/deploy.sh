@@ -19,13 +19,13 @@ if helm history --max 1 "$app_name" 2>/dev/null | grep FAILED | cut -f1 | grep -
     helm delete --purge "$app_name"
 fi
 
+#    --set hostAliases=[] \
 helm upgrade $app_name ./helmchart --install --wait --force \
     --namespace default \
     --set REGISTRY_IP=$REGISTRY_IP \
     --set REGISTRY_PORT=$REGISTRY_PORT \
     --set INGRESS_HOST=$INGRESS_HOST \
     --set INGRESS_PORT=$SECURE_INGRESS_PORT \
-    --set hostAliases=[] \
     ;
 
 popd

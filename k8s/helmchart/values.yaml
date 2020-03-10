@@ -14,7 +14,8 @@ replicaCount: 1
   #   memory: 128Mi
 
 # hostAliases allows the modification of the hosts file inside a container
-hostAliases: []
- # - ip: "xx.xx.xx.xx"
- #   hostnames:
- #   - "xxxxxx.falabella.cl"
+#hostAliases: []
+#hostAliases:
+#  - ip: "10.0.2.2"
+#    hostnames:
+#    - "keycloak.example.com"

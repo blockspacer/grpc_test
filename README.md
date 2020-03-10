@@ -41,7 +41,7 @@ Note that once we deploy this service over Istio, the grpc- prefix in the Servic
 minikube stop
 # OR minikube delete
 # Use `--insecure-registry='192.168.39.0/24'`, see https://minikube.sigs.k8s.io/docs/tasks/docker_registry/
-minikube start --alsologtostderr --kubernetes-version v1.12.10 --memory=14288 --cpus=2 --disk-size 25GB --vm-driver virtualbox \
+minikube start --alsologtostderr --kubernetes-version v1.13.0 --memory=7192 --cpus=4 --disk-size 35GB --vm-driver virtualbox \
   --extra-config='apiserver.enable-admission-plugins=LimitRanger,NamespaceExists,NamespaceLifecycle,ResourceQuota,ServiceAccount,DefaultStorageClass,MutatingAdmissionWebhook' \
   --extra-config=apiserver.authorization-mode=RBAC \
   --insecure-registry='localhost' \
@@ -116,7 +116,7 @@ bash scripts/install_istio.sh
 # istioctl manifest apply --set values.global.mtls.enabled=true,values.security.selfSigned=false --set values.global.controlPlaneSecurityEnabled=true
 
 # Enable automatic sidecar injection for defaultnamespace
-kubectl label namespace default istio-injection=enabled
+(kubectl label namespace default istio-injection=enabled || true)
 ```
 
 > if you want to exclude a specific pod from getting istio sidecar injected, add this to `Deployment` kind
@@ -145,6 +145,7 @@ bash scripts/install_tiller.sh
 
 # NOTE: create GITHUB_TOKEN with `read:packages` scope https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line
 sudo -E docker login -u USER_NAME -p GITHUB_TOKEN docker.pkg.github.com
+# export AUTHSERVICE_IMAGE=authservice
 export AUTHSERVICE_IMAGE=docker.pkg.github.com/istio-ecosystem/authservice/authservice:0.1.0-243af67fc9eb
 sudo -E docker pull $AUTHSERVICE_IMAGE --disable-content-trust
 sudo -E docker tag $AUTHSERVICE_IMAGE $(minikube ip):5000/gaeus:authservice
@@ -206,6 +207,7 @@ sudo -E cat <<EOF | sudo -E tee /etc/docker/daemon.json
     "dns": ["127.0.0.53", "8.8.4.4", "8.8.8.8"],
     "insecure-registries": [
       "192.168.39.0/24",
+      "192.168.99.0/24",
       "$(minikube ip):5000"
     ],
     "registry-mirrors":["https://docker.mirrors.ustc.edu.cn"],
@@ -483,7 +485,9 @@ chmod 400 *.key
 # see https://istio.io/docs/tasks/traffic-management/ingress/secure-ingress-mount/
 # The secret must be named istio-ingressgateway-certs in the istio-system namespace to align with the configuration of the Istio default ingress gateway used in this task.
 kubectl delete --ignore-not-found=true -n istio-system secret istio-ingressgateway-certs istio-ingressgateway-ca-certs
+sleep 3
 kubectl create -n istio-system secret tls istio-ingressgateway-certs --key httpbin.example.com.key --cert httpbin.example.com.crt
+sleep 3
 # Verify that tls.crt and tls.key have been mounted in the ingress gateway pod:
 kubectl exec -it -n istio-system $(kubectl -n istio-system get pods -l istio=ingressgateway -o jsonpath='{.items[0].metadata.name}') -- ls -al /etc/istio/ingressgateway-certs
 ```

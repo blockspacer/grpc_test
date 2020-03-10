@@ -12,7 +12,10 @@ helm ls --all
 
 if helm history --max 1 $app_name 2>/dev/null; then
     echo "helm delete for $app_name..."
-    helm delete --purge "$app_name"
+    # https://github.com/helm/helm/pull/5283
+    (helm delete --purge "$app_name" || true)
+    (helm delete "$app_name" || true)
+    (helm uninstall "$app_name" || true)
 fi
 
 popd
@@ -51,7 +54,6 @@ popd
 #  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
 #  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
 #  | kubectl delete --ignore-not-found=true -f -
-
 #kubectl delete destinationrules --all -n default
 #
 #kubectl delete gateway --all -n default

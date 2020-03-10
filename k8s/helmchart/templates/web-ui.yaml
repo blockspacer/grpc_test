@@ -26,11 +26,11 @@ spec:
       labels:
         app: web-ui
         version: v1
-    {{- if .Values.hostAliases }}
-    hostAliases:
-{{ toYaml .Values.hostAliases | indent 8 }}
-    {{- end }}
     spec:
+      hostAliases:
+      - ip: "10.0.2.2"
+        hostnames:
+        - "keycloak.example.com"
       volumes:
         - name: app-authservice-configmap-volume # declare the volume containing the authservice ConfigMap
           configMap:
