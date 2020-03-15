@@ -69,7 +69,7 @@ sudo install minikube /usr/local/bin
 minikube status
 minikube stop
 # OR minikube delete
-minikube start --alsologtostderr --kubernetes-version v1.12.10 --memory=12288 --cpus=4 --disk-size 25GB --vm-driver virtualbox \
+minikube start --alsologtostderr --kubernetes-version v1.13.0 --memory=7192 --cpus=4 --disk-size 35GB --vm-driver virtualbox \
   --extra-config='apiserver.enable-admission-plugins=LimitRanger,NamespaceExists,NamespaceLifecycle,ResourceQuota,ServiceAccount,DefaultStorageClass,MutatingAdmissionWebhook' \
   --extra-config=apiserver.authorization-mode=RBAC \
   --insecure-registry='localhost' \
@@ -101,7 +101,7 @@ kubectl get svc -n istio-system
 # ensure corresponding Kubernetes pods are deployed and have a STATUS of Running
 kubectl get pods -n istio-system
 
-kubectl label namespace default istio-injection=enabled
+(kubectl label namespace default istio-injection=enabled || true)
 
 # To install Agones, a service account needs permission to create some special RBAC resource types.
 kubectl create clusterrolebinding cluster-admin-binding \
@@ -121,6 +121,14 @@ kubectl get gameservers
 kubectl describe gameserver
 
 kubectl get gs
+
+# NOTE: create GITHUB_TOKEN with `read:packages` scope as in https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line
+# NOTE: GITHUB_TOKEN from https://github.com/settings/tokens
+sudo -E docker login -u USER_NAME -p GITHUB_TOKEN docker.pkg.github.com
+export AUTHSERVICE_IMAGE=docker.pkg.github.com/istio-ecosystem/authservice/authservice:0.1.0-243af67fc9eb
+sudo -E docker pull $AUTHSERVICE_IMAGE --disable-content-trust
+sudo -E docker tag $AUTHSERVICE_IMAGE $(minikube ip):5000/gaeus:authservice
+sudo -E docker push $(minikube ip):5000/gaeus:authservice
 
 # echo "hello" | nc -u $(minikube ip) 7331
 

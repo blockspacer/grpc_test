@@ -31,11 +31,27 @@ Add istioctl to PATH https://gist.github.com/blockspacer/0237dcdea981f78f8c3ea80
 
 Enable `registry` addon for `minikube` as in https://minikube.sigs.k8s.io/docs/tasks/docker_registry/
 
+Generate TLS certs and apply as kubectl secret, see below
+
+```bash
+kubectl exec -it -n istio-system $(kubectl -n istio-system get pods -l istio=ingressgateway -o jsonpath='{.items[0].metadata.name}') -- ls -al /etc/istio/ingressgateway-certs
+```
+
+Must print
+
+```bash
+# ...
+lrwxrwxrwx 1 root root   14 Feb 28 10:30 tls.crt -> ..data/tls.crt
+lrwxrwxrwx 1 root root   14 Feb 28 10:30 tls.key -> ..data/tls.key
+# ...
+
 Tested with `GRPC_RELEASE_TAG=v1.26.x`
 
 We can now simply deploy the above configurations in the following order.
 
 Note that once we deploy this service over Istio, the grpc- prefix in the Service port name will allow Istio to recognize this as a gRPC service.
+
+Build and push deps to local conan package registry as in `cat scripts/clean_start.sh`
 
 ```bash
 minikube stop
@@ -48,7 +64,11 @@ minikube start --alsologtostderr --kubernetes-version v1.13.0 --memory=7192 --cp
   --insecure-registry='127.0.0.1' \
   --insecure-registry "192.168.39.0/24"
 # OPTIONAL: open dashboard
-minikube addons enable dashboard && kubectl get pods --all-namespaces | grep dashboard && sleep 15 && minikube dashboard --url
+minikube addons enable dashboard 
+kubectl get pods --all-namespaces | grep dashboard 
+# wait
+sleep 15
+minikube dashboard --url
 # see http://rastko.tech/kubernetes/2019/01/01/minikube-on-mac.html
 minikube addons enable ingress
 # It will take few mins for the registry to be enabled, you can watch the status using kubectl get pods -n kube-system -w | grep registry
@@ -62,7 +82,7 @@ kubectl -n kube-system get svc registry -o jsonpath='{.spec.clusterIP}'
 # see http://rastko.tech/kubernetes/2019/01/01/minikube-on-mac.html
 # see http://rastko.tech/kubernetes/2019/01/01/minikube-on-mac.html
 
-Now the kubernetes part. Copy the clusterIP of the registry service running on kube-system namespace and put it on the pod spec's image as in https://amritbera.com/journal/minikube-insecure-registry.html:
+(OPTIONAL) Now the kubernetes part. Copy the clusterIP of the registry service running on kube-system namespace and put it on the pod spec's image as in https://amritbera.com/journal/minikube-insecure-registry.html:
 
 ```yaml
 ...
@@ -78,7 +98,9 @@ spec:
 ...
 ```
 
-Add result of `echo $(minikube ip)` into `NO_PROXY` in `/etc/systemd/system/docker.service.d/http-proxy.conf` or `~/.docker/config.json`
+(OPTIONAL) Add result of `echo $(minikube ip)` into `NO_PROXY` in `/etc/systemd/system/docker.service.d/http-proxy.conf` or `~/.docker/config.json`
+
+Use minikube context:
 
 ```bash
 kubectl config use-context minikube
@@ -102,15 +124,29 @@ EOF
 minikube ssh -- sudo cat /etc/docker/daemon.json
 minikube ssh -- sudo systemctl daemon-reload
 minikube ssh -- sudo systemctl restart docker
+```
+
+(OPTIONAL) use minikube tunnel feature
+
+```bash
 # Run this command in a different terminal, because the minikube tunnel feature will block your terminal to output diagnostic information about the network:
 minikube tunnel
 # Sometimes minikube does not clean up the tunnel network properly. To force a proper cleanup:
 minikube tunnel --cleanup
+```
 
+Apply istio manifest:
+
+```bash
+# (OPTIONAL) delete old istio instance
 # https://github.com/istio/istio/issues/6085#issuecomment-493015039
 (kubectl delete meshpolicy default || true)
 (kubectl delete ns istio-system || true)
 
+istioctl verify-install
+
+# create new istio instance
+# NOTE: security disabled for local development
 bash scripts/install_istio.sh
 # OR
 # istioctl manifest apply --set values.global.mtls.enabled=true,values.security.selfSigned=false --set values.global.controlPlaneSecurityEnabled=true
@@ -132,6 +168,8 @@ metadata:
 bash scripts/install_tiller.sh
 ```
 
+Apply TLS Certs to istio namespace, see below
+
 ## Build docker images
 
 ```bash
@@ -143,7 +181,8 @@ bash scripts/install_tiller.sh
 # sudo -E docker tag gaeus:authservice $(minikube ip):5000/gaeus:authservice
 # cd -
 
-# NOTE: create GITHUB_TOKEN with `read:packages` scope https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line
+# NOTE: create GITHUB_TOKEN with `read:packages` scope as in https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line
+# NOTE: GITHUB_TOKEN from https://github.com/settings/tokens
 sudo -E docker login -u USER_NAME -p GITHUB_TOKEN docker.pkg.github.com
 # export AUTHSERVICE_IMAGE=authservice
 export AUTHSERVICE_IMAGE=docker.pkg.github.com/istio-ecosystem/authservice/authservice:0.1.0-243af67fc9eb
@@ -188,7 +227,11 @@ sudo -E docker build \
   --tag gaeus:server . \
   --no-cache
 
-sudo -E docker tag gaeus:server $(minikube ip):5000/gaeus:server
+sudo -E docker push $(minikube ip):5000/gaeus:server
+
+sudo -E docker push $(minikube ip):5000/gaeus:web-ui
+
+sudo -E docker push $(minikube ip):5000/gaeus:authservice
 ```
 
 ## Push docker images to local minikube
@@ -218,6 +261,8 @@ sudo -E cat <<EOF | sudo -E tee /etc/docker/daemon.json
     }
 }
 EOF
+
+# NOTE: replace $(minikube ip) with real ip addr
 sudo -E cat /etc/docker/daemon.json
 
 # reload docker after changes in in `/etc/docker/daemon.json`
@@ -244,40 +289,127 @@ http_proxy= no_proxy="$(minikube ip),localhost" \
   curl -vk http://$(minikube ip):5000/v2/gaeus/tags/list
 ```
 
+## Keycloak
+
+TODO!!!!
+deploy keycloak
+see https://gist.github.com/blockspacer/211a932cb0a535a1b098ec0ac562eeb8#gistcomment-3147793
+
+## TLS Certs
+
+Delete old app
+
+```bash
+cd -
+
+bash clean.sh
+
+kubectl get all -n default
+kubectl get ingress -n default
+kubectl get gateway -n default
+kubectl get destinationrules -n default
+kubectl get virtualservices -n default
+kubectl get pod -n default
+
+# CAUTION!
+# kubectl delete namespaces default --grace-period=5 --force
+```
+
+Crete new certs
+
+```bash
+cd tools/gen_cert
+sh ./dockerized_gen_cert.sh
+sudo chown $USER *.key *.csr *.crt
+chmod 400 *.key
+file httpbin.example.com.key
+file httpbin.example.com.crt
+# see https://istio.io/docs/tasks/traffic-management/ingress/secure-ingress-mount/
+# The secret must be named istio-ingressgateway-certs in the istio-system namespace to align with the configuration of the Istio default ingress gateway used in this task.
+kubectl delete --ignore-not-found=true -n istio-system secret istio-ingressgateway-certs istio-ingressgateway-ca-certs
+sleep 5 # wait
+kubectl create -n istio-system secret tls istio-ingressgateway-certs --key httpbin.example.com.key --cert httpbin.example.com.crt
+sleep 5 # wait
+# Verify that tls.crt and tls.key have been mounted in the ingress gateway pod:
+kubectl exec -it -n istio-system $(kubectl -n istio-system get pods -l istio=ingressgateway -o jsonpath='{.items[0].metadata.name}') -- ls -al /etc/istio/ingressgateway-certs
+```
+
+```bash
+# see https://istio.io/docs/tasks/traffic-management/ingress/secure-ingress-mount/
+# The secret must be named istio-ingressgateway-certs in the istio-system namespace to align with the configuration of the Istio default ingress gateway used in this task.
+#kubectl create -n istio-system secret generic istio-ingressgateway-ca-certs --from-file=httpbin.example.com.crt
+```
+
+```bash
+#kubectl create namespace istio-system
+#kubectl create secret generic cacerts -n istio-system \
+#     --from-file=httpbin.example.com.crt \
+#     --from-file=httpbin.example.com.key
+```
+
+Must print
+
+```bash
+# ...
+lrwxrwxrwx 1 root root   14 Feb 28 10:30 tls.crt -> ..data/tls.crt
+lrwxrwxrwx 1 root root   14 Feb 28 10:30 tls.key -> ..data/tls.key
+# ...
+```
+
+```bash
+# ... Re-deploy app ... AS ABOVE ...
+bash deploy.sh
+```
+
+```bash
+# CHECK
+kubectl get componentstatuses
+```
+
+It might take time for the gateway definition to propagate so you might get the following error: `Failed to connect to httpbin.example.com port <your secure port>: Connection refused.` Wait for a minute and then retry the curl call.
+
+```bash
+cd tools/gen_cert
+echo "INGRESS_HOST=$INGRESS_HOST INGRESS_PORT=$INGRESS_PORT SECURE_INGRESS_PORT=$SECURE_INGRESS_PORT"
+curl -v -HHost:httpbin.example.com --resolve httpbin.example.com:$SECURE_INGRESS_PORT:$INGRESS_HOST --cacert httpbin.example.com.crt https://$INGRESS_HOST:$SECURE_INGRESS_PORT/status/418
+# Validate `Server certificate:` in output
+cd -
+```
+
+Don't forget to add it to Chromium browser `Chromium -> Setting -> (Advanced) Manage Certificates -> Import -> 'server_rootCA.pem'`
+
 ## Upload yaml files
 
 ```bash
 cd istio
-
-# NOTE: you can just run `bash deploy.sh`
 
 # Tag your images with $(minikube ip):5000/image-name and push them.
 # Inside k8s your images will be available from localhost:5000 registry, so your k8s manifests should specify image as `localhost:5000/image-name`.
 export REGISTRY_IP=localhost # Requires pushing of images to registry
 #export REGISTRY_IP=$(minikube ip) # Requires `eval $(minikube docker-env)`
 export REGISTRY_PORT=5000
-cat web-ui.yaml | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" | kubectl apply -f -
-# NOTE: waits by pod label, see -lapp=...
-kubectl wait pod -lapp=web-ui --for=condition=Ready --timeout=30s -n default
-kubectl get pods | grep -m2 "web-ui-"
-kubectl get svc web-ui
-# check `minikube service ...... --url` via curl
-http_proxy= no_proxy="$(minikube ip),$(minikube service web-ui --url),localhost" \
-  curl -vk $(minikube service web-ui --url)
-cat filter.yaml | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" | kubectl apply -f -
-cat authservice-configmap-template-for-authn.yaml | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" | kubectl apply -f -
-cat server.yaml | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" | kubectl apply -f <(istioctl kube-inject -f -)
-# NOTE: waits by pod label, see -lapp=...
-kubectl wait pod -lapp=server --for=condition=Ready --timeout=30s -n default
-http_proxy= no_proxy="$(minikube ip),$(minikube service server --url),localhost" \
-  curl -vk $(minikube service server --url)
-cat gateway.yaml | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" | kubectl apply -f -
 
 # use $INGRESS_HOST:$INGRESS_PORT from https://istio.io/docs/tasks/traffic-management/ingress/ingress-control/
 export INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="http2")].nodePort}')
 export SECURE_INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="https")].nodePort}')
 export INGRESS_HOST=$(minikube ip)
 echo "INGRESS_HOST=$INGRESS_HOST INGRESS_PORT=$INGRESS_PORT SECURE_INGRESS_PORT=$SECURE_INGRESS_PORT"
+
+bash deploy.sh
+
+# NOTE: waits by pod label, see -lapp=...
+kubectl wait pod -lapp=web-ui --for=condition=Ready --timeout=30s -n default
+kubectl get pods | grep -m2 "web-ui-"
+kubectl get svc web-ui
+
+# check `minikube service ...... --url` via curl
+http_proxy= no_proxy="$(minikube ip),$(minikube service web-ui --url),localhost" \
+  curl -vk $(minikube service web-ui --url)
+
+# NOTE: waits by pod label, see -lapp=...
+kubectl wait pod -lapp=server --for=condition=Ready --timeout=30s -n default
+http_proxy= no_proxy="$(minikube ip),$(minikube service server --url),localhost" \
+  curl -vk $(minikube service server --url)
 
 kubectl get pods | grep -m2 "server-"
 kubectl get svc server
@@ -453,70 +585,3 @@ see `chrome://flags/#allow-insecure-localhost`
 TODO!!!!
 deploy keycloak
 see https://gist.github.com/blockspacer/211a932cb0a535a1b098ec0ac562eeb8#gistcomment-3147793
-
-## TLS Certs
-
-Delete old app
-
-```bash
-cd -
-
-bash clean.sh
-
-kubectl get all -n default
-kubectl get ingress -n default
-kubectl get gateway -n default
-kubectl get destinationrules -n default
-kubectl get virtualservices -n default
-kubectl get pod -n default
-
-# CAUTION!
-# kubectl delete namespaces default --grace-period=5 --force
-# ... Re-deploy app ... AS ABOVE ...
-```
-
-Crete new certs
-
-```bash
-cd tools/gen_cert
-sh ./dockerized_gen_cert.sh
-sudo chown $USER *.key *.csr *.crt
-chmod 400 *.key
-# see https://istio.io/docs/tasks/traffic-management/ingress/secure-ingress-mount/
-# The secret must be named istio-ingressgateway-certs in the istio-system namespace to align with the configuration of the Istio default ingress gateway used in this task.
-kubectl delete --ignore-not-found=true -n istio-system secret istio-ingressgateway-certs istio-ingressgateway-ca-certs
-sleep 3
-kubectl create -n istio-system secret tls istio-ingressgateway-certs --key httpbin.example.com.key --cert httpbin.example.com.crt
-sleep 3
-# Verify that tls.crt and tls.key have been mounted in the ingress gateway pod:
-kubectl exec -it -n istio-system $(kubectl -n istio-system get pods -l istio=ingressgateway -o jsonpath='{.items[0].metadata.name}') -- ls -al /etc/istio/ingressgateway-certs
-```
-
-Must print
-
-```bash
-lrwxrwxrwx 1 root root   14 Feb 28 10:30 tls.crt -> ..data/tls.crt
-lrwxrwxrwx 1 root root   14 Feb 28 10:30 tls.key -> ..data/tls.key
-```
-
-```bash
-# ... Re-deploy app ... AS ABOVE ...
-bash deploy.sh
-```
-
-```bash
-# CHECK
-kubectl get componentstatuses
-```
-
-It might take time for the gateway definition to propagate so you might get the following error: `Failed to connect to httpbin.example.com port <your secure port>: Connection refused.` Wait for a minute and then retry the curl call.
-
-```bash
-cd tools/gen_cert
-echo "INGRESS_HOST=$INGRESS_HOST INGRESS_PORT=$INGRESS_PORT SECURE_INGRESS_PORT=$SECURE_INGRESS_PORT"
-curl -v -HHost:httpbin.example.com --resolve httpbin.example.com:$SECURE_INGRESS_PORT:$INGRESS_HOST --cacert httpbin.example.com.crt https://$INGRESS_HOST:$SECURE_INGRESS_PORT/status/418
-# Validate `Server certificate:` in output
-cd -
-```
-
-Don't forget to add it to Chromium browser `Chromium -> Setting -> (Advanced) Manage Certificates -> Import -> 'server_rootCA.pem'`

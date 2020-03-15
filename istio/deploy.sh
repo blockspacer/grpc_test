@@ -12,6 +12,9 @@ echo "INGRESS_HOST=$INGRESS_HOST INGRESS_PORT=$INGRESS_PORT SECURE_INGRESS_PORT=
 
 export app_name=myapp
 
+export MY_IP=$(ip route get 8.8.8.8 | sed -n '/src/{s/.*src *\([^ ]*\).*/\1/p;q}')
+echo "my ip is $MY_IP..."
+
 pushd ../k8s
 
 # see https://github.com/helm/helm/issues/3353#issuecomment-469074425
@@ -76,3 +79,5 @@ kubectl wait pod -lapp=server --for=condition=Ready --timeout=30s -n default
 #  | sed "s/{{REGISTRY_IP}}/$REGISTRY_IP/g" \
 #  | sed "s/{{REGISTRY_PORT}}/$REGISTRY_PORT/g" \
 #  | kubectl apply -f -
+
+echo "open in browser https://$INGRESS_HOST:$SECURE_INGRESS_PORT/"

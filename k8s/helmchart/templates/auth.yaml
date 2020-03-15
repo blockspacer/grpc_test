@@ -12,7 +12,7 @@ spec:
   #peers:
   #  - mtls:
   #      mode: STRICT
-  originIsOptional: true
+  #originIsOptional: true
   origins:
 # see https://discuss.istio.io/t/jwt-origin-auth-on-ingress-for-some-hosts-but-not-for-others/3828/4
 # see https://codingthunderbolt.blogspot.com/2019/08/sso-wso2-api-manager-and-keycloak.html

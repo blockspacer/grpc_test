@@ -113,7 +113,7 @@ spec:
           host: web-ui
       #timeout: 10s
       #maxGrpcTimeout: 10s
-      websocketUpgrade: true
+      #websocketUpgrade: true
       corsPolicy:
         allowOrigin:
         - "*" # for webpack-dev-server testing
