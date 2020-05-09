@@ -8,6 +8,8 @@ ARG NPX="npx"
 ARG NODE="node"
 ARG NODE_GYP="node-gyp"
 ARG NPM_INSTALL="npm install --loglevel verbose"
+# NOTE: under proxy change to:
+# NODE_TLS_REJECT_UNAUTHORIZED=0 HTTP_PROXY=$http_proxy HTTPS_PROXY=$https_proxy npm install --unsafe-perm binding --loglevel verbose
 ARG NPM_INSTALL_UNSAFE="npm install --unsafe-perm binding --loglevel verbose"
 #ARG PROTOC="protoc"
 ARG LS_VERBOSE="ls -artl"
@@ -152,6 +154,10 @@ RUN set -ex \
   ($APT remove -y node || true) \
   # Uninstall the default version provided by Ubuntu package manager, so we can install custom one
   && \
+  # Uninstall the default version provided by Ubuntu package manager, so we can install custom one
+  ($APT remove -y nodejs || true) \
+  # Uninstall the default version provided by Ubuntu package manager, so we can install custom one
+  && \
   ($APT remove -y npm || true) \
   # Uninstall the default version provided by Ubuntu package manager, so we can install custom one
   && \
@@ -201,6 +207,10 @@ RUN set -ex \
   && \
   # to install devDependencies
   $NPM config set -g production false \
+  && \
+  # https://medium.com/@mallim/how-to-use-node-sass-in-a-closed-environment-859880720f2a
+  # OR sudo npm config set sass-binary-site=https://npm.taobao.org/mirrors/node-sass --global
+  $NPM_INSTALL_UNSAFE --save-dev node-sass --sass-binary-site=https://npm.taobao.org/mirrors/node-sass \
   && \
   # install app deps
   if [ ! -z "$http_proxy" ]; then \
