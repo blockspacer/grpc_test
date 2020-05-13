@@ -53,7 +53,8 @@ ENV LC_ALL=C.UTF-8 \
     CONAN_REVISIONS_ENABLED=1 \
     CONAN_PRINT_RUN_COMMANDS=1 \
     CONAN_LOGGING_LEVEL=10 \
-    CONAN_VERBOSE_TRACEBACK=1
+    CONAN_VERBOSE_TRACEBACK=1 \
+    PYTHON=/usr/bin/python3
 
 # docker build --build-arg NO_SSL="False" APT="apt-get -qq --no-install-recommends" .
 ARG NO_SSL="True"
@@ -80,6 +81,9 @@ RUN set -ex \
   && \
   # requires python
   python3 --version \
+  && \
+  # requires PYTHON env var
+  $PYTHON --version \
   && \
   $APT update \
   && \
@@ -210,6 +214,7 @@ RUN set -ex \
   && \
   # https://medium.com/@mallim/how-to-use-node-sass-in-a-closed-environment-859880720f2a
   # OR sudo npm config set sass-binary-site=https://npm.taobao.org/mirrors/node-sass --global
+  # NOTE: requires python
   $NPM_INSTALL_UNSAFE --save-dev node-sass --sass-binary-site=https://npm.taobao.org/mirrors/node-sass \
   && \
   # install app deps
