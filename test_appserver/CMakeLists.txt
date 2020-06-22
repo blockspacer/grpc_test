@@ -12,15 +12,43 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/build/") # for conan
 
 # --------------------------- conan configuration ------------------------------
 
-# Conan package manager List of packages used by the project is container in
-# conanfile.py
-option(CONAN_AUTO_INSTALL "Let CMake call conan install automatically" OFF)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/fetch_cmake_utils.cmake)
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/fetch_conan_auto_install.cmake)
+
+option(CONAN_AUTO_INSTALL
+  "Let CMake call conan install automatically"
+  OFF
+)
 if (CONAN_AUTO_INSTALL)
   set(CONAN_PROFILE
-      "default"
+      "clang"
       CACHE STRING "Conan profile to use during installation")
-  include(cmake/conan-auto-install.cmake)
-  conan_auto_install(${CONAN_PROFILE})
+  if (NOT cmake_build_type_tolower MATCHES "debug" )
+    set(conan_build_type "Release")
+  else()
+    set(conan_build_type "Debug")
+  endif()
+  # No --build=missing cause llvm requires long build
+  conan_auto_install(
+    CONAN_OPTIONS "--profile=${CONAN_PROFILE} -s build_type=${conan_build_type} -s cling_conan:build_type=Release -s llvm_tools:build_type=Release -o openssl:shared=True"
+    #FORCE
+  )
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/conanbuildinfo.cmake")
+  list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_BINARY_DIR}/)
+  include(${CMAKE_CURRENT_BINARY_DIR}/conanbuildinfo.cmake)
+  include(${CMAKE_CURRENT_BINARY_DIR}/conan_paths.cmake OPTIONAL)
+  conan_basic_setup(
+    # prevent conan_basic_setup from resetting cmake variables
+    TARGETS
+    KEEP_RPATHS
+    # see https://github.com/conan-io/conan/issues/6012
+    NO_OUTPUT_DIRS
+    )
+else()
+  message (FATAL_ERROR "must use conan")
 endif()
 
 if(EXISTS "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake")

@@ -44,7 +44,7 @@ class test_appserver_conan_project(ConanFile):
     default_options = (
         "shared=False",
         "debug=False",
-        "enable_protoc_autoinstall=False",
+        "enable_protoc_autoinstall=True",
         "enable_tests=False",
         "enable_sanitizers=False",
         "enable_web_pthreads=True"

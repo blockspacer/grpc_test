@@ -795,3 +795,4 @@ miniconda3/
 \grpc
 \grpc-web
 *.pem
+/test_appserver/typescript
