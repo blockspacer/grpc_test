@@ -47,6 +47,24 @@ HTTP_PROXY= http_proxy= HTTPS_PROXY= https_proxy= no_proxy=localhost,127.0.0.1 .
 HTTP_PROXY= http_proxy= HTTPS_PROXY= https_proxy= no_proxy=localhost,127.0.0.1 gdb ./build/test_appserver_core -ex "run" -ex "set pagination off" -ex "bt" -ex "set confirm off" -ex "quit"
 ```
 
+## System configuration (Linux for high loads)
+
+```bash
+sysctl -w 'fs.nr_open=10000000'
+
+sysctl -w  'net.core.rmem_max=12582912'
+sysctl -w 'net.core.wmem_max=12582912'
+
+sysctl -w 'net.ipv4.tcp_mem=10240 87380 12582912'
+sysctl -w 'net.ipv4.tcp_rmem=10240 87380 12582912'
+sysctl -w 'net.ipv4.tcp_wmem=10240 87380 12582912'
+sysctl -w 'net.core.somaxconn=15000'
+```
+
+See:
+* https://medium.com/@pawilon/tuning-your-linux-kernel-and-haproxy-instance-for-high-loads-1a2105ea553e
+* https://gist.github.com/mustafaturan/47268d8ad6d56cadda357e4c438f51ca
+
 ## NOTE
 
 Build without debug for production
