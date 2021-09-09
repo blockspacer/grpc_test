@@ -11,8 +11,13 @@ based on commands from Dockerfile
 You can use local conan remotes, see `conan remote add`
 
 ```bash
-export NPM_INSTALL="npm install --unsafe-perm binding --loglevel verbose"
+export VERBOSE=1
 export CONAN_REVISIONS_ENABLED=1
+export CONAN_VERBOSE_TRACEBACK=1
+export CONAN_PRINT_RUN_COMMANDS=1
+export CONAN_LOGGING_LEVEL=10
+
+export NPM_INSTALL="npm install --unsafe-perm binding --loglevel verbose"
 export CMAKE=cmake
 sudo -E $NPM_INSTALL -g node-gyp
 # Note: node-gyp configure can give an error gyp: binding.gyp not found, but it's ok.
